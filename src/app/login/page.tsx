@@ -19,7 +19,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-12">
       <Link href="/" className="text-xl font-semibold tracking-tight">
-        Trading<span className="text-emerald-600">AI</span>
+        Trading<span className="text-primary">AI</span>
       </Link>
       <LoginForm defaultMode={defaultMode} />
     </main>

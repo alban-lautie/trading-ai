@@ -19,7 +19,7 @@ export function FeatureCard({ icon: Icon, title, description }: FeatureCardProps
   return (
     <Card>
       <CardHeader>
-        <Icon className="text-emerald-600" size={24} aria-hidden />
+        <Icon className="text-primary" size={24} aria-hidden />
         <CardTitle className="mt-2 text-base">{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
