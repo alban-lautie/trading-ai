@@ -1,5 +1,3 @@
-import type { AlertType } from "@/lib/types"
-
 /** Minimal, inline-styled HTML wrapper shared by every email. */
 function layout(title: string, body: string): string {
   return `<!doctype html>
@@ -16,37 +14,6 @@ function layout(title: string, body: string): string {
     </div>
   </body>
 </html>`
-}
-
-const ALERT_LABELS: Record<AlertType, string> = {
-  price_above: "price rose above",
-  price_below: "price fell below",
-  change_percent_above: "daily change rose above",
-  change_percent_below: "daily change fell below",
-}
-
-interface AlertEmailParams {
-  symbol: string
-  type: AlertType
-  threshold: number
-  currentValue: number
-}
-
-/** Builds the HTML for a triggered price/variation alert. */
-export function renderAlertEmail({
-  symbol,
-  type,
-  threshold,
-  currentValue,
-}: AlertEmailParams): { subject: string; html: string } {
-  const subject = `Alert triggered: ${symbol}`
-  const html = layout(
-    subject,
-    `<p>Your alert on <strong>${symbol}</strong> has triggered.</p>
-     <p>The ${ALERT_LABELS[type]} <strong>${threshold}</strong>.</p>
-     <p>Current value: <strong>${currentValue}</strong>.</p>`
-  )
-  return { subject, html }
 }
 
 /** Builds the HTML for an AI monitoring report. */

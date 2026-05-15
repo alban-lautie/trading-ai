@@ -141,6 +141,36 @@ export type Database = {
           },
         ]
       }
+      notification_settings: {
+        Row: {
+          created_at: string
+          telegram_chat_id: string | null
+          telegram_link_code: string | null
+          telegram_linked_at: string | null
+          telegram_username: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          telegram_chat_id?: string | null
+          telegram_link_code?: string | null
+          telegram_linked_at?: string | null
+          telegram_username?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          telegram_chat_id?: string | null
+          telegram_link_code?: string | null
+          telegram_linked_at?: string | null
+          telegram_username?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       positions: {
         Row: {
           average_price: number

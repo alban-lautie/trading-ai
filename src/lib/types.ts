@@ -16,3 +16,5 @@ export type AiMonitoringConfigInsert = Tables["ai_monitoring_config"]["Insert"]
 export type AiReport = Tables["ai_reports"]["Row"]
 export type AiFrequency = Enums["ai_frequency"]
 export type AiDelivery = Enums["ai_delivery"]
+
+export type NotificationSettings = Tables["notification_settings"]["Row"]

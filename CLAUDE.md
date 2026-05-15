@@ -9,7 +9,8 @@ Application web de suivi de portefeuille d'actions. L'utilisateur saisit ses pos
 - **Next.js 16** — App Router, TypeScript strict (pas de `any` implicite). ⚠️ Voir `AGENTS.md` : cette version a des breaking changes, consulter `node_modules/next/dist/docs/` avant d'écrire du code Next.js.
 - **shadcn/ui** — bibliothèque de composants UI (Radix + Tailwind v4).
 - **Supabase** — base de données Postgres, authentification, Row Level Security. **En local** (Supabase CLI / Docker), pas d'instance cloud en développement.
-- **Resend** — envoi des emails (alertes, notifications, suivi IA).
+- **Telegram Bot API** — notifications d'alertes poussées sur le téléphone.
+- **Resend** — envoi des emails du suivi IA.
 - **Yahoo Finance** (API non officielle) — cours des actions en temps réel.
 - **Anthropic Claude** — moteur du suivi IA paramétrable.
 
@@ -26,7 +27,9 @@ Application web de suivi de portefeuille d'actions. L'utilisateur saisit ses pos
 
 ### Alertes
 - L'utilisateur définit des alertes par position (seuil de prix, seuil de % de variation).
-- Déclenchement → email via Resend.
+- Déclenchement → notification **Telegram** (l'utilisateur connecte son compte
+  Telegram via un bot dédié, configuré avec `TELEGRAM_BOT_TOKEN`).
+- L'évaluation périodique des seuils n'est pas encore câblée.
 
 ### Suivi IA paramétrable
 - Analyse du portefeuille par Claude (API Anthropic).
@@ -83,10 +86,12 @@ src/
     api/              route handlers (proxy cotations)
   components/
     ui/               composants shadcn/ui
-  features/           logique par domaine (positions, alerts, ai-monitoring)
+  features/           logique par domaine (positions, alerts, ai-monitoring,
+                      notifications)
   lib/
     supabase/         clients Supabase (browser, server, middleware)
     market-data/      couche d'abstraction cotations (Yahoo Finance)
+    telegram/         client Telegram Bot API
     email/            wrapper Resend
     ai/               wrapper Anthropic Claude
 supabase/
