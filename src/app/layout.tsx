@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 
 import { Toaster } from "@/components/ui/sonner"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import "./globals.css"
 
 const geistSans = Geist({
@@ -51,7 +52,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="bg-background text-foreground flex min-h-full flex-col">
-        {children}
+        <TooltipProvider delayDuration={0}>{children}</TooltipProvider>
         <Toaster richColors position="top-right" />
       </body>
     </html>
