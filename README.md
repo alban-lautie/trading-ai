@@ -1,36 +1,84 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Trading AI
 
-## Getting Started
+Application web de suivi de portefeuille d'actions. Saisissez vos positions
+(action, quantité, prix d'achat) et visualisez en temps réel le cours actuel,
+la performance et la plus/moins-value latente. Alertes de prix et suivi IA
+paramétrable de votre portefeuille.
 
-First, run the development server:
+## Stack
+
+- **Next.js 16** (App Router, TypeScript)
+- **shadcn/ui** + Tailwind CSS v4
+- **Supabase** (Postgres, Auth, Row Level Security) — en local
+- **Resend** — emails d'alertes et de suivi IA
+- **Yahoo Finance** — cours des actions (API non officielle)
+- **Anthropic Claude** — analyse IA du portefeuille
+
+## Prérequis
+
+- Node.js 20+
+- Docker (pour Supabase en local)
+- Supabase CLI
+
+## Installation
 
 ```bash
+# 1. Dépendances
+npm install
+
+# 2. Démarrer Supabase en local (applique les migrations)
+npx supabase start
+
+# 3. Variables d'environnement
+cp .env.example .env.local
+# Renseignez les clés affichées par `npx supabase start`,
+# ainsi que RESEND_API_KEY et ANTHROPIC_API_KEY.
+
+# 4. (Optionnel) Régénérer les types de la base
+npx supabase gen types typescript --local > src/lib/database.types.ts
+
+# 5. Lancer l'application
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+L'application est disponible sur http://localhost:3000.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Supabase local
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Supabase tourne en local via Docker. **Les ports sont décalés de +200** par
+rapport aux ports par défaut pour éviter les conflits avec d'autres projets :
 
-## Learn More
+| Service   | Port  |
+| --------- | ----- |
+| API       | 54521 |
+| Database  | 54522 |
+| Studio    | 54523 |
+| Inbucket  | 54524 |
+| Analytics | 54527 |
 
-To learn more about Next.js, take a look at the following resources:
+Commandes utiles : `npx supabase start`, `npx supabase stop`,
+`npx supabase db reset` (réapplique les migrations).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Scripts
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Script          | Description                       |
+| --------------- | --------------------------------- |
+| `npm run dev`   | Serveur de développement          |
+| `npm run build` | Build de production               |
+| `npm run start` | Sert le build de production       |
+| `npm run lint`  | Analyse statique (ESLint)         |
 
-## Deploy on Vercel
+## Structure
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```
+src/
+  app/              routes (App Router) — landing, login, espace applicatif, API
+  components/       composants UI (dont shadcn/ui)
+  features/         logique métier (positions, alerts, ai-monitoring)
+  lib/              clients Supabase, market-data, email, ai, helpers
+supabase/
+  config.toml       configuration locale (ports +200)
+  migrations/        schéma SQL
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Voir `CLAUDE.md` pour les conventions de code du projet.

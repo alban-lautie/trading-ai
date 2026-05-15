@@ -1,65 +1,100 @@
-import Image from "next/image";
+import type { Metadata } from "next"
+import Link from "next/link"
+import { Bell, LineChart, Sparkles, Wallet } from "lucide-react"
 
-export default function Home() {
+import { FeatureCard } from "@/components/marketing/feature-card"
+import { LandingHeader } from "@/components/marketing/landing-header"
+import { Button } from "@/components/ui/button"
+
+export const metadata: Metadata = {
+  title: "Suivi de portefeuille d'actions en temps réel",
+  alternates: { canonical: "/" },
+}
+
+const features = [
+  {
+    icon: Wallet,
+    title: "Saisissez vos positions",
+    description:
+      "Renseignez une action, la quantité achetée et le prix d'achat. Trading AI fait le reste.",
+  },
+  {
+    icon: LineChart,
+    title: "Performance en temps réel",
+    description:
+      "Cours actuel, pourcentage de performance et plus/moins-value latente, mis à jour en continu.",
+  },
+  {
+    icon: Bell,
+    title: "Alertes de prix",
+    description:
+      "Définissez des seuils de prix ou de variation et recevez un email dès qu'ils sont atteints.",
+  },
+  {
+    icon: Sparkles,
+    title: "Suivi IA paramétrable",
+    description:
+      "Une analyse de votre portefeuille par l'IA, selon la fréquence, le ton et les axes que vous choisissez.",
+  },
+]
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Trading AI",
+  applicationCategory: "FinanceApplication",
+  operatingSystem: "Web",
+  description:
+    "Application de suivi de portefeuille d'actions en temps réel avec alertes et suivi IA paramétrable.",
+}
+
+export default function LandingPage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <LandingHeader />
+
+      <main className="flex-1">
+        <section className="mx-auto max-w-5xl px-4 py-20 text-center">
+          <h1 className="mx-auto max-w-3xl text-4xl font-bold tracking-tight sm:text-5xl">
+            Suivez votre portefeuille d&apos;actions en temps réel
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-muted-foreground mx-auto mt-6 max-w-2xl text-lg">
+            Saisissez vos positions et visualisez instantanément votre
+            performance, votre plus/moins-value latente, vos alertes et un
+            suivi IA personnalisé.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+          <div className="mt-8 flex justify-center gap-3">
+            <Button asChild size="lg">
+              <Link href="/login?mode=signup">Créer un compte gratuit</Link>
+            </Button>
+            <Button asChild size="lg" variant="outline">
+              <Link href="/login">Se connecter</Link>
+            </Button>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-5xl px-4 pb-24">
+          <h2 className="text-center text-2xl font-semibold tracking-tight">
+            Tout ce qu&apos;il faut pour piloter vos investissements
+          </h2>
+          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {features.map((feature) => (
+              <FeatureCard key={feature.title} {...feature} />
+            ))}
+          </div>
+        </section>
       </main>
-    </div>
-  );
+
+      <footer className="border-t">
+        <div className="text-muted-foreground mx-auto max-w-5xl px-4 py-8 text-sm">
+          © {new Date().getFullYear()} Trading AI — Suivi de portefeuille
+          d&apos;actions.
+        </div>
+      </footer>
+    </>
+  )
 }
