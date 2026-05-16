@@ -59,3 +59,20 @@ export async function getPortfolio(): Promise<PortfolioData> {
     quotesError,
   }
 }
+
+/** Returns the current user's positions without live quotes, ordered by symbol. */
+export async function listPositions(): Promise<Position[]> {
+  const { user, supabase } = await requireUser()
+
+  const { data, error } = await supabase
+    .from("positions")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("symbol", { ascending: true })
+
+  if (error) {
+    throw new Error(`Failed to load positions: ${error.message}`)
+  }
+
+  return data ?? []
+}

@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Switch } from "@/components/ui/switch"
 import { deleteAlert, toggleAlert } from "@/features/alerts/actions"
-import { ALERT_TYPE_LABELS } from "@/lib/alert-labels"
+import { ALERT_TYPE_LABELS, isPercentAlertType } from "@/lib/alert-labels"
 import type { Alert } from "@/lib/types"
 
 interface AlertItemProps {
@@ -48,6 +48,7 @@ export function AlertItem({ alert }: AlertItemProps) {
         </div>
         <p className="text-muted-foreground text-sm">
           {ALERT_TYPE_LABELS[alert.type]} {Number(alert.threshold)}
+          {isPercentAlertType(alert.type) ? " %" : ""}
         </p>
       </div>
       <div className="flex items-center gap-3">

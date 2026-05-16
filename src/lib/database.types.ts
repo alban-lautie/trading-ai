@@ -228,6 +228,8 @@ export type Database = {
         | "price_below"
         | "change_percent_above"
         | "change_percent_below"
+        | "unrealized_gain_above"
+        | "unrealized_loss_above"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -365,6 +367,8 @@ export const Constants = {
         "price_below",
         "change_percent_above",
         "change_percent_below",
+        "unrealized_gain_above",
+        "unrealized_loss_above",
       ],
     },
   },

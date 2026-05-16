@@ -5,13 +5,15 @@ import { CreateAlertDialog } from "@/components/alerts/create-alert-dialog"
 import { TelegramConnect } from "@/components/notifications/telegram-connect"
 import { getAlerts } from "@/features/alerts/queries"
 import { getNotificationSettings } from "@/features/notifications/queries"
+import { listPositions } from "@/features/positions/queries"
 
 export const metadata: Metadata = { title: "Alertes" }
 
 export default async function AlertsPage() {
-  const [alerts, notificationSettings] = await Promise.all([
+  const [alerts, notificationSettings, positions] = await Promise.all([
     getAlerts(),
     getNotificationSettings(),
+    listPositions(),
   ])
 
   return (
@@ -23,7 +25,7 @@ export default async function AlertsPage() {
             Surveillez vos actions et recevez les alertes sur Telegram.
           </p>
         </div>
-        <CreateAlertDialog />
+        <CreateAlertDialog positions={positions} />
       </header>
 
       <TelegramConnect settings={notificationSettings} />

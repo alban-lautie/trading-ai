@@ -6,14 +6,16 @@ import { requireUser } from "@/features/auth"
 import { alertSchema } from "@/features/alerts/schema"
 import type { ActionResult } from "@/features/positions/actions"
 
-/** Creates a price/variation alert for the current user. */
+/**
+ * Creates an alert for the current user. The alert is tied to one of the
+ * user's positions; its symbol is resolved from that position.
+ */
 export async function createAlert(
   _prevState: ActionResult,
   formData: FormData
 ): Promise<ActionResult> {
   const parsed = alertSchema.safeParse({
-    symbol: formData.get("symbol"),
-    positionId: formData.get("positionId") ?? undefined,
+    positionId: formData.get("positionId"),
     type: formData.get("type"),
     threshold: formData.get("threshold"),
   })
@@ -23,14 +25,27 @@ export async function createAlert(
   }
 
   const { user, supabase } = await requireUser()
-  const values = parsed.data
+  const { positionId, type, threshold } = parsed.data
+
+  const { data: position, error: positionError } = await supabase
+    .from("positions")
+    .select("symbol")
+    .eq("id", positionId)
+    .maybeSingle()
+
+  if (positionError) {
+    return { error: positionError.message }
+  }
+  if (!position) {
+    return { error: "Action introuvable." }
+  }
 
   const { error } = await supabase.from("alerts").insert({
     user_id: user.id,
-    symbol: values.symbol,
-    position_id: values.positionId || null,
-    type: values.type,
-    threshold: values.threshold,
+    position_id: positionId,
+    symbol: position.symbol,
+    type,
+    threshold,
   })
 
   if (error) {

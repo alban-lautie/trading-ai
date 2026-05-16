@@ -25,17 +25,21 @@ import {
 } from "@/components/ui/select"
 import { createAlert } from "@/features/alerts/actions"
 import { alertTypes } from "@/features/alerts/schema"
-import { ALERT_TYPE_LABELS } from "@/lib/alert-labels"
-import type { AlertType } from "@/lib/types"
+import { ALERT_TYPE_LABELS, isPercentAlertType } from "@/lib/alert-labels"
+import type { AlertType, Position } from "@/lib/types"
 
 interface AlertFormFields {
-  symbol: string
   threshold: string
 }
 
+interface CreateAlertDialogProps {
+  positions: Position[]
+}
+
 /** Dialog hosting the create alert form. */
-export function CreateAlertDialog() {
+export function CreateAlertDialog({ positions }: CreateAlertDialogProps) {
   const [open, setOpen] = useState(false)
+  const [positionId, setPositionId] = useState("")
   const [type, setType] = useState<AlertType>("price_above")
   const [isPending, startTransition] = useTransition()
 
@@ -44,15 +48,21 @@ export function CreateAlertDialog() {
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm<AlertFormFields>({
-    defaultValues: { symbol: "", threshold: "" },
-  })
+  } = useForm<AlertFormFields>({ defaultValues: { threshold: "" } })
+
+  const hasPositions = positions.length > 0
+  const isPercent = isPercentAlertType(type)
 
   function onSubmit(values: AlertFormFields) {
+    if (!positionId) {
+      toast.error("Choisissez une action")
+      return
+    }
+
     const formData = new FormData()
-    formData.set("symbol", values.symbol)
-    formData.set("threshold", values.threshold)
+    formData.set("positionId", positionId)
     formData.set("type", type)
+    formData.set("threshold", values.threshold)
 
     startTransition(async () => {
       const result = await createAlert({}, formData)
@@ -63,6 +73,7 @@ export function CreateAlertDialog() {
       toast.success("Alerte créée")
       setOpen(false)
       reset()
+      setPositionId("")
       setType("price_above")
     })
   }
@@ -70,29 +81,41 @@ export function CreateAlertDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>Nouvelle alerte</Button>
+        <Button
+          disabled={!hasPositions}
+          title={
+            hasPositions ? undefined : "Ajoutez d'abord une position"
+          }
+        >
+          Nouvelle alerte
+        </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Nouvelle alerte</DialogTitle>
           <DialogDescription>
-            Recevez un email dès que le seuil est atteint.
+            Recevez une notification Telegram dès que la condition est
+            remplie.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="symbol">Symbole (ticker)</Label>
-            <Input
-              id="symbol"
-              placeholder="AAPL"
-              {...register("symbol", { required: "Le symbole est requis" })}
-            />
-            {errors.symbol ? (
-              <p className="text-destructive text-sm">
-                {errors.symbol.message}
-              </p>
-            ) : null}
+            <Label>Action</Label>
+            <Select value={positionId} onValueChange={setPositionId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choisir une action" />
+              </SelectTrigger>
+              <SelectContent>
+                {positions.map((position) => (
+                  <SelectItem key={position.id} value={position.id}>
+                    {position.symbol}
+                    {position.name ? ` — ${position.name}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+
           <div className="grid gap-2">
             <Label>Condition</Label>
             <Select
@@ -111,12 +134,16 @@ export function CreateAlertDialog() {
               </SelectContent>
             </Select>
           </div>
+
           <div className="grid gap-2">
-            <Label htmlFor="threshold">Seuil</Label>
+            <Label htmlFor="threshold">
+              {isPercent ? "Seuil (%)" : "Seuil de cours"}
+            </Label>
             <Input
               id="threshold"
               type="number"
               step="any"
+              min="0"
               {...register("threshold", { required: "Le seuil est requis" })}
             />
             {errors.threshold ? (
@@ -125,6 +152,7 @@ export function CreateAlertDialog() {
               </p>
             ) : null}
           </div>
+
           <DialogFooter>
             <Button type="submit" disabled={isPending}>
               {isPending ? "Création…" : "Créer l'alerte"}
