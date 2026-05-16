@@ -213,6 +213,36 @@ export type Database = {
         }
         Relationships: []
       }
+      quotes: {
+        Row: {
+          change: number
+          change_percent: number
+          currency: string
+          name: string | null
+          price: number
+          symbol: string
+          updated_at: string
+        }
+        Insert: {
+          change?: number
+          change_percent?: number
+          currency?: string
+          name?: string | null
+          price: number
+          symbol: string
+          updated_at?: string
+        }
+        Update: {
+          change?: number
+          change_percent?: number
+          currency?: string
+          name?: string | null
+          price?: number
+          symbol?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

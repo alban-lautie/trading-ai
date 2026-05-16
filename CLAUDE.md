@@ -60,7 +60,12 @@ Application web de suivi de portefeuille d'actions. L'utilisateur saisit ses pos
 ## Cours de bourse (Yahoo Finance)
 
 - L'API Yahoo Finance est **non officielle** : tous les appels sont isolés dans `src/lib/market-data/` pour pouvoir changer de fournisseur sans impacter le reste du code.
-- Les cours sont mis en cache (TTL court) pour limiter les requêtes et absorber une éventuelle indisponibilité.
+- Les cours sont **rafraîchis par un cron** (`pg_cron`, toutes les 5 min) qui
+  appelle `POST /api/cron/refresh-quotes` et stocke les cours dans la table
+  `quotes`. Le dashboard lit cette table ; un symbole absent (position juste
+  ajoutée) est récupéré en direct en complément.
+- L'endpoint cron est protégé par `CRON_SECRET` ; le même secret est stocké
+  côté base dans `private.cron_config`.
 - Gestion d'erreur explicite : si le cours est indisponible, l'afficher clairement plutôt que d'afficher une valeur fausse.
 
 ## Sécurité

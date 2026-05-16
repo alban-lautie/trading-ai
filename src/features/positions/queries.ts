@@ -1,6 +1,7 @@
 import "server-only"
 
 import { requireUser } from "@/features/auth"
+import { getStoredQuotes } from "@/features/quotes/queries"
 import { getQuotes, MarketDataError, type Quote } from "@/lib/market-data"
 import {
   computePositionMetrics,
@@ -37,13 +38,32 @@ export async function getPortfolio(): Promise<PortfolioData> {
   let quotesError: string | null = null
   let quotes = new Map<string, Quote>()
 
+  // Prefer the quotes kept fresh by the refresh cron.
   try {
-    quotes = await getQuotes(symbols)
-  } catch (cause) {
-    quotesError =
-      cause instanceof MarketDataError
-        ? cause.message
-        : "Live quotes are temporarily unavailable."
+    quotes = await getStoredQuotes(symbols)
+  } catch {
+    quotes = new Map()
+  }
+
+  // Symbols not yet in the store (e.g. a position added since the last cron
+  // run) are fetched live so the dashboard is never stale on first view.
+  const missing = symbols.filter(
+    (symbol) => !quotes.has(symbol.toUpperCase())
+  )
+  if (missing.length > 0) {
+    try {
+      const live = await getQuotes(missing)
+      for (const [symbol, quote] of live) {
+        quotes.set(symbol, quote)
+      }
+    } catch (cause) {
+      if (quotes.size === 0) {
+        quotesError =
+          cause instanceof MarketDataError
+            ? cause.message
+            : "Live quotes are temporarily unavailable."
+      }
+    }
   }
 
   const rows = positions.map((position) =>
