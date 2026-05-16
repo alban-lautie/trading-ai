@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react"
 import { Hand, Plus, ShieldAlert, TrendingUp } from "lucide-react"
 
+import { ProposalAlertSwitch } from "@/components/positions/proposal-alert-switch"
 import { Badge } from "@/components/ui/badge"
 import {
   Card,
@@ -15,9 +16,11 @@ import {
 } from "@/features/positions/proposals"
 import { formatCurrency } from "@/lib/format"
 import type { PositionWithMetrics } from "@/lib/portfolio"
+import type { Alert } from "@/lib/types"
 
 interface PositionProposalsProps {
   metrics: PositionWithMetrics
+  alerts: Alert[]
 }
 
 const KIND_META: Record<
@@ -46,10 +49,11 @@ const KIND_META: Record<
   },
 }
 
-/** Suggested actions for the position (take profit, stop loss, …). */
-export function PositionProposals({ metrics }: PositionProposalsProps) {
+/** Suggested actions for the position, each with a switch to arm an alert. */
+export function PositionProposals({ metrics, alerts }: PositionProposalsProps) {
   const proposals = buildPositionProposals(metrics)
   const currency = metrics.position.currency
+  const positionId = metrics.position.id
 
   return (
     <Card>
@@ -61,7 +65,8 @@ export function PositionProposals({ metrics }: PositionProposalsProps) {
           <Badge variant="secondary">Données simulées</Badge>
         </div>
         <CardDescription>
-          Suggestions indicatives — ce n&apos;est pas un conseil en
+          Activez le switch pour être alerté sur Telegram lorsque le cours
+          atteint le niveau proposé. Ce n&apos;est pas un conseil en
           investissement.
         </CardDescription>
       </CardHeader>
@@ -69,6 +74,12 @@ export function PositionProposals({ metrics }: PositionProposalsProps) {
         {proposals.map((proposal) => {
           const meta = KIND_META[proposal.kind]
           const Icon = meta.icon
+          const hasAlert =
+            proposal.targetPrice !== null && proposal.alertType !== null
+          const alertActive = alerts.some(
+            (alert) => alert.proposal_kind === proposal.kind
+          )
+
           return (
             <div
               key={proposal.kind}
@@ -96,6 +107,17 @@ export function PositionProposals({ metrics }: PositionProposalsProps) {
                 <p className="text-muted-foreground text-xs leading-relaxed">
                   {proposal.rationale}
                 </p>
+                {hasAlert ? (
+                  <div className="border-t pt-2">
+                    <ProposalAlertSwitch
+                      positionId={positionId}
+                      kind={proposal.kind}
+                      alertType={proposal.alertType as string}
+                      targetPrice={proposal.targetPrice as number}
+                      initialActive={alertActive}
+                    />
+                  </div>
+                ) : null}
               </div>
             </div>
           )

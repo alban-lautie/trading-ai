@@ -62,7 +62,7 @@ export default async function PositionDetailPage({
 
       <PositionMetricCards metrics={metrics} />
 
-      <PositionProposals metrics={metrics} />
+      <PositionProposals metrics={metrics} alerts={alerts} />
 
       <PositionPriceChart symbol={position.symbol} initialHistory={history} />
 

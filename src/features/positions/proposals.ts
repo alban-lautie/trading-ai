@@ -1,4 +1,5 @@
 import type { PositionWithMetrics } from "@/lib/portfolio"
+import type { AlertType } from "@/lib/types"
 
 /**
  * Position-action proposals.
@@ -17,6 +18,8 @@ export interface PositionProposal {
   rationale: string
   /** Suggested price level, when the proposal targets one. */
   targetPrice: number | null
+  /** Alert condition this proposal arms, or null when it has no alert. */
+  alertType: AlertType | null
 }
 
 /** Builds mock position-action proposals from the position's figures. */
@@ -36,6 +39,7 @@ export function buildPositionProposals(
           ? `Position en plus-value de ${(pnl * 100).toFixed(1)} %. Alléger 25 à 50 % de la ligne à l'approche de ce niveau permettrait de sécuriser le gain.`
           : "Fixer un objectif de sortie partielle pour sécuriser un gain dès que le cours franchit ce niveau.",
       targetPrice: averagePrice * 1.2,
+      alertType: "price_above",
     },
     {
       kind: "stop_loss",
@@ -43,6 +47,7 @@ export function buildPositionProposals(
       rationale:
         "Couper la position sous ce niveau limiterait la perte à environ 10 % du prix d'achat.",
       targetPrice: averagePrice * 0.9,
+      alertType: "price_below",
     },
     {
       kind: "reinforce",
@@ -50,6 +55,7 @@ export function buildPositionProposals(
       rationale:
         "Si la thèse d'investissement reste valable, un renfort à ce niveau abaisserait le prix de revient moyen.",
       targetPrice: averagePrice * 0.95,
+      alertType: "price_below",
     },
     {
       kind: "hold",
@@ -59,6 +65,7 @@ export function buildPositionProposals(
           ? `Cours actuel ${price.toFixed(2)}. Tant qu'il évolue entre le stop et l'objectif, conserver sans intervenir.`
           : "Conserver tant que le cours évolue entre le stop et l'objectif.",
       targetPrice: null,
+      alertType: null,
     },
   ]
 }

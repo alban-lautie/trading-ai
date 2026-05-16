@@ -100,6 +100,7 @@ export type Database = {
           id: string
           is_active: boolean
           position_id: string | null
+          proposal_kind: string | null
           symbol: string
           threshold: number
           triggered_at: string | null
@@ -112,6 +113,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           position_id?: string | null
+          proposal_kind?: string | null
           symbol: string
           threshold: number
           triggered_at?: string | null
@@ -124,6 +126,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           position_id?: string | null
+          proposal_kind?: string | null
           symbol?: string
           threshold?: number
           triggered_at?: string | null
