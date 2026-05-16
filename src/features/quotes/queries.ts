@@ -1,21 +1,26 @@
 import "server-only"
 
+import type { SupabaseClient } from "@supabase/supabase-js"
+
+import type { Database } from "@/lib/database.types"
 import { getQuotes, MarketDataError, type Quote } from "@/lib/market-data"
 import { createClient } from "@/lib/supabase/server"
 
+type QuotesClient = SupabaseClient<Database>
+
 /**
- * Reads the stored quotes for the given symbols from the `quotes` table.
- * These are kept fresh by the scheduled refresh cron.
+ * Reads the stored quotes for the given symbols from the `quotes` table with
+ * an explicit Supabase client. Used by service-role jobs (cron) that cannot
+ * rely on the request-scoped client.
  */
-export async function getStoredQuotes(
+export async function getStoredQuotesWith(
+  supabase: QuotesClient,
   symbols: string[]
 ): Promise<Map<string, Quote>> {
   const result = new Map<string, Quote>()
   if (symbols.length === 0) return result
 
   const wanted = [...new Set(symbols.map((symbol) => symbol.toUpperCase()))]
-  const supabase = await createClient()
-
   const { data, error } = await supabase
     .from("quotes")
     .select("*")
@@ -38,6 +43,16 @@ export async function getStoredQuotes(
   }
 
   return result
+}
+
+/**
+ * Reads the stored quotes for the given symbols from the `quotes` table.
+ * These are kept fresh by the scheduled refresh cron.
+ */
+export async function getStoredQuotes(
+  symbols: string[]
+): Promise<Map<string, Quote>> {
+  return getStoredQuotesWith(await createClient(), symbols)
 }
 
 /**

@@ -22,6 +22,20 @@ export const positionSchema = z.object({
     .transform((value) => value.toUpperCase())
     .default("USD"),
   openedAt: z.string().optional().or(z.literal("")),
+  // Investment intent — drives the AI sell recommendation for this position.
+  objective: z.enum(["quick_gain", "long_term", "income"]).default("long_term"),
+  horizon: z.enum(["short", "medium", "long"]).default("medium"),
+  riskTolerance: z.enum(["low", "medium", "high"]).default("medium"),
+  targetGainPercent: z.preprocess(
+    (value) =>
+      value === "" || value === undefined || value === null
+        ? undefined
+        : value,
+    z.coerce
+      .number({ message: "Target gain must be a number" })
+      .positive("Target gain must be greater than zero")
+      .optional()
+  ),
   notes: z.string().trim().max(500).optional().or(z.literal("")),
 })
 

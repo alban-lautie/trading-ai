@@ -48,15 +48,39 @@ function formatAlertMessage(
   symbol: string,
   type: AlertType,
   threshold: number,
-  quote: QuoteSnapshot
+  quote: QuoteSnapshot,
+  proposalKind: string | null
 ): string {
   const unit = isPercentAlertType(type) ? " %" : ""
+  const condition = `Condition : ${ALERT_TYPE_LABELS[type]} ${threshold}${unit}`
+  const price = `Cours actuel : ${quote.price} ${quote.currency}`
+
+  if (proposalKind === "take_profit") {
+    return [
+      "🎯 *Trading AI* — Objectif de vente atteint",
+      "",
+      `*${symbol}*`,
+      "Le cours a atteint l'objectif de vente fixé par l'IA. C'est le moment de réaliser tout ou partie de la position.",
+      condition,
+      price,
+    ].join("\n")
+  }
+  if (proposalKind === "stop_loss") {
+    return [
+      "🛑 *Trading AI* — Stop de protection atteint",
+      "",
+      `*${symbol}*`,
+      "Le cours est passé sous le seuil de protection. Envisage de couper la position pour limiter la perte.",
+      condition,
+      price,
+    ].join("\n")
+  }
   return [
     "🔔 *Trading AI* — Alerte déclenchée",
     "",
     `*${symbol}*`,
-    `Condition : ${ALERT_TYPE_LABELS[type]} ${threshold}${unit}`,
-    `Cours actuel : ${quote.price} ${quote.currency}`,
+    condition,
+    price,
   ].join("\n")
 }
 
@@ -74,7 +98,7 @@ export async function evaluateAlerts(): Promise<EvaluateResult> {
   const { data: alerts, error } = await supabase
     .from("alerts")
     .select(
-      "id, user_id, symbol, type, threshold, position:positions(average_price)"
+      "id, user_id, symbol, type, threshold, proposal_kind, position:positions(average_price)"
     )
     .eq("is_active", true)
     .is("triggered_at", null)
@@ -142,7 +166,13 @@ export async function evaluateAlerts(): Promise<EvaluateResult> {
     try {
       await sendTelegramMessage(
         chatId,
-        formatAlertMessage(alert.symbol, alert.type, threshold, quote)
+        formatAlertMessage(
+          alert.symbol,
+          alert.type,
+          threshold,
+          quote,
+          alert.proposal_kind
+        )
       )
     } catch {
       // Delivery failed; keep the alert active and retry next cycle.

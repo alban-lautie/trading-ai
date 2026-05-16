@@ -1,17 +1,22 @@
 import { buildPositionProposals } from "@/features/positions/proposals"
 import type { DailySummaryPosition } from "@/lib/ai/claude"
 import type { PositionWithMetrics } from "@/lib/portfolio"
+import type { PositionRecommendation } from "@/lib/types"
 
 /**
  * Maps the portfolio rows into the per-position input the daily summary
  * prompt expects, including the take-profit / stop levels and the weight.
+ * The price levels come from each position's AI recommendation when one is
+ * available, falling back to heuristic placeholders otherwise.
  */
 export function buildDailySummaryPositions(
   rows: PositionWithMetrics[],
-  totalMarketValue: number
+  totalMarketValue: number,
+  recommendations: Map<string, PositionRecommendation> = new Map()
 ): DailySummaryPosition[] {
   return rows.map((row) => {
-    const proposals = buildPositionProposals(row)
+    const recommendation = recommendations.get(row.position.id) ?? null
+    const proposals = buildPositionProposals(row, recommendation)
     const takeProfit =
       proposals.find((p) => p.kind === "take_profit")?.targetPrice ?? 0
     const stopLoss =

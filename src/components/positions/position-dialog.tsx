@@ -17,7 +17,13 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { IntentionField } from "@/components/positions/intention-field"
 import { createPosition, updatePosition } from "@/features/positions/actions"
+import {
+  POSITION_HORIZON_OPTIONS,
+  POSITION_OBJECTIVE_OPTIONS,
+  RISK_TOLERANCE_OPTIONS,
+} from "@/features/positions/intentions"
 import type { Position } from "@/lib/types"
 
 interface PositionFormFields {
@@ -27,6 +33,10 @@ interface PositionFormFields {
   averagePrice: string
   currency: string
   openedAt: string
+  objective: string
+  horizon: string
+  riskTolerance: string
+  targetGainPercent: string
   notes: string
 }
 
@@ -43,6 +53,7 @@ export function PositionDialog({ position, trigger }: PositionDialogProps) {
 
   const {
     register,
+    control,
     handleSubmit,
     reset,
     formState: { errors },
@@ -54,6 +65,13 @@ export function PositionDialog({ position, trigger }: PositionDialogProps) {
       averagePrice: position ? String(position.average_price) : "",
       currency: position?.currency ?? "USD",
       openedAt: position?.opened_at ?? "",
+      objective: position?.objective ?? "long_term",
+      horizon: position?.horizon ?? "medium",
+      riskTolerance: position?.risk_tolerance ?? "medium",
+      targetGainPercent:
+        position?.target_gain_percent != null
+          ? String(position.target_gain_percent)
+          : "",
       notes: position?.notes ?? "",
     },
   })
@@ -148,6 +166,52 @@ export function PositionDialog({ position, trigger }: PositionDialogProps) {
             <div className="grid gap-2">
               <Label htmlFor="openedAt">Date d&apos;achat</Label>
               <Input id="openedAt" type="date" {...register("openedAt")} />
+            </div>
+          </div>
+          <div className="grid gap-1">
+            <p className="text-sm font-medium">Intention d&apos;investissement</p>
+            <p className="text-muted-foreground text-xs">
+              Sert de cadre à la recommandation de vente générée par l&apos;IA.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <IntentionField
+              control={control}
+              name="objective"
+              label="Objectif"
+              options={POSITION_OBJECTIVE_OPTIONS}
+            />
+            <IntentionField
+              control={control}
+              name="horizon"
+              label="Horizon"
+              options={POSITION_HORIZON_OPTIONS}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <IntentionField
+              control={control}
+              name="riskTolerance"
+              label="Tolérance au risque"
+              options={RISK_TOLERANCE_OPTIONS}
+            />
+            <div className="grid gap-2">
+              <Label htmlFor="targetGainPercent">
+                Gain cible % (optionnel)
+              </Label>
+              <Input
+                id="targetGainPercent"
+                type="number"
+                step="any"
+                min="0"
+                placeholder="20"
+                {...register("targetGainPercent")}
+              />
+              {errors.targetGainPercent ? (
+                <p className="text-destructive text-sm">
+                  {errors.targetGainPercent.message}
+                </p>
+              ) : null}
             </div>
           </div>
           <div className="grid gap-2">

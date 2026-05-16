@@ -198,17 +198,62 @@ export type Database = {
         }
         Relationships: []
       }
+      position_recommendations: {
+        Row: {
+          action: Database["public"]["Enums"]["recommendation_action"]
+          conviction: Database["public"]["Enums"]["conviction_level"]
+          generated_at: string
+          id: string
+          position_id: string
+          sell_target_price: number | null
+          stop_loss_price: number | null
+          user_id: string
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["recommendation_action"]
+          conviction: Database["public"]["Enums"]["conviction_level"]
+          generated_at?: string
+          id?: string
+          position_id: string
+          sell_target_price?: number | null
+          stop_loss_price?: number | null
+          user_id: string
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["recommendation_action"]
+          conviction?: Database["public"]["Enums"]["conviction_level"]
+          generated_at?: string
+          id?: string
+          position_id?: string
+          sell_target_price?: number | null
+          stop_loss_price?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "position_recommendations_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: true
+            referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       positions: {
         Row: {
           average_price: number
           created_at: string
           currency: string
+          horizon: Database["public"]["Enums"]["position_horizon"]
           id: string
           name: string | null
           notes: string | null
+          objective: Database["public"]["Enums"]["position_objective"]
           opened_at: string
           quantity: number
+          risk_tolerance: Database["public"]["Enums"]["risk_tolerance"]
           symbol: string
+          target_gain_percent: number | null
           updated_at: string
           user_id: string
         }
@@ -216,12 +261,16 @@ export type Database = {
           average_price: number
           created_at?: string
           currency?: string
+          horizon?: Database["public"]["Enums"]["position_horizon"]
           id?: string
           name?: string | null
           notes?: string | null
+          objective?: Database["public"]["Enums"]["position_objective"]
           opened_at?: string
           quantity: number
+          risk_tolerance?: Database["public"]["Enums"]["risk_tolerance"]
           symbol: string
+          target_gain_percent?: number | null
           updated_at?: string
           user_id: string
         }
@@ -229,12 +278,16 @@ export type Database = {
           average_price?: number
           created_at?: string
           currency?: string
+          horizon?: Database["public"]["Enums"]["position_horizon"]
           id?: string
           name?: string | null
           notes?: string | null
+          objective?: Database["public"]["Enums"]["position_objective"]
           opened_at?: string
           quantity?: number
+          risk_tolerance?: Database["public"]["Enums"]["risk_tolerance"]
           symbol?: string
+          target_gain_percent?: number | null
           updated_at?: string
           user_id?: string
         }
@@ -287,6 +340,11 @@ export type Database = {
         | "change_percent_below"
         | "unrealized_gain_above"
         | "unrealized_loss_above"
+      conviction_level: "low" | "medium" | "high"
+      position_horizon: "short" | "medium" | "long"
+      position_objective: "quick_gain" | "long_term" | "income"
+      recommendation_action: "sell_now" | "hold" | "reinforce"
+      risk_tolerance: "low" | "medium" | "high"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -427,6 +485,11 @@ export const Constants = {
         "unrealized_gain_above",
         "unrealized_loss_above",
       ],
+      conviction_level: ["low", "medium", "high"],
+      position_horizon: ["short", "medium", "long"],
+      position_objective: ["quick_gain", "long_term", "income"],
+      recommendation_action: ["sell_now", "hold", "reinforce"],
+      risk_tolerance: ["low", "medium", "high"],
     },
   },
 } as const

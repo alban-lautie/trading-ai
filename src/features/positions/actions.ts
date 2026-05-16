@@ -18,6 +18,10 @@ function parseForm(formData: FormData) {
     averagePrice: formData.get("averagePrice"),
     currency: formData.get("currency") || "USD",
     openedAt: formData.get("openedAt") ?? undefined,
+    objective: formData.get("objective") ?? undefined,
+    horizon: formData.get("horizon") ?? undefined,
+    riskTolerance: formData.get("riskTolerance") ?? undefined,
+    targetGainPercent: formData.get("targetGainPercent") ?? undefined,
     notes: formData.get("notes") ?? undefined,
   })
 }
@@ -48,6 +52,10 @@ export async function createPosition(
     average_price: values.averagePrice,
     currency: values.currency,
     opened_at: values.openedAt || undefined,
+    objective: values.objective,
+    horizon: values.horizon,
+    risk_tolerance: values.riskTolerance,
+    target_gain_percent: values.targetGainPercent ?? null,
     notes: values.notes || null,
   })
 
@@ -82,6 +90,10 @@ export async function updatePosition(
       average_price: values.averagePrice,
       currency: values.currency,
       opened_at: values.openedAt || undefined,
+      objective: values.objective,
+      horizon: values.horizon,
+      risk_tolerance: values.riskTolerance,
+      target_gain_percent: values.targetGainPercent ?? null,
       notes: values.notes || null,
     })
     .eq("id", positionId)

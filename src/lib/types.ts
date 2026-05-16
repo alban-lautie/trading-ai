@@ -6,6 +6,15 @@ type Enums = Database["public"]["Enums"]
 export type Position = Tables["positions"]["Row"]
 export type PositionInsert = Tables["positions"]["Insert"]
 export type PositionUpdate = Tables["positions"]["Update"]
+export type PositionObjective = Enums["position_objective"]
+export type PositionHorizon = Enums["position_horizon"]
+export type RiskTolerance = Enums["risk_tolerance"]
+
+export type PositionRecommendation = Tables["position_recommendations"]["Row"]
+export type PositionRecommendationInsert =
+  Tables["position_recommendations"]["Insert"]
+export type RecommendationAction = Enums["recommendation_action"]
+export type ConvictionLevel = Enums["conviction_level"]
 
 export type Alert = Tables["alerts"]["Row"]
 export type AlertInsert = Tables["alerts"]["Insert"]

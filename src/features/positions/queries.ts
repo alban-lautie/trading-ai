@@ -1,6 +1,7 @@
 import "server-only"
 
 import { requireUser } from "@/features/auth"
+import { getRecommendation } from "@/features/positions/recommendations"
 import { getQuotesWithFallback } from "@/features/quotes/queries"
 import {
   getPriceHistory,
@@ -14,7 +15,7 @@ import {
   type PortfolioSummary,
   type PositionWithMetrics,
 } from "@/lib/portfolio"
-import type { Alert, Position } from "@/lib/types"
+import type { Alert, Position, PositionRecommendation } from "@/lib/types"
 
 export interface PortfolioData {
   rows: PositionWithMetrics[]
@@ -80,6 +81,8 @@ export interface PositionDetail {
   news: NewsItem[]
   /** Share of the total portfolio value held in this position. */
   portfolioWeight: number | null
+  /** Latest AI sell recommendation, or `null` when none was generated yet. */
+  recommendation: PositionRecommendation | null
 }
 
 /**
@@ -100,7 +103,7 @@ export async function getPositionDetail(
   const { symbol } = metrics.position
   const { supabase } = await requireUser()
 
-  const [history, news, alertsResult] = await Promise.all([
+  const [history, news, alertsResult, recommendation] = await Promise.all([
     getPriceHistory(symbol, "6mo").catch(() => null),
     getStockNews(symbol),
     supabase
@@ -108,6 +111,7 @@ export async function getPositionDetail(
       .select("*")
       .eq("position_id", id)
       .order("created_at", { ascending: false }),
+    getRecommendation(supabase, id),
   ])
 
   if (alertsResult.error) {
@@ -126,5 +130,6 @@ export async function getPositionDetail(
     history,
     news,
     portfolioWeight,
+    recommendation,
   }
 }

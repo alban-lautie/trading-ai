@@ -35,7 +35,8 @@ export default async function PositionDetailPage({
     notFound()
   }
 
-  const { metrics, alerts, history, news, portfolioWeight } = detail
+  const { metrics, alerts, history, news, portfolioWeight, recommendation } =
+    detail
   const { position } = metrics
 
   return (
@@ -62,7 +63,11 @@ export default async function PositionDetailPage({
 
       <PositionMetricCards metrics={metrics} />
 
-      <PositionProposals metrics={metrics} alerts={alerts} />
+      <PositionProposals
+        metrics={metrics}
+        alerts={alerts}
+        recommendation={recommendation}
+      />
 
       <PositionPriceChart symbol={position.symbol} initialHistory={history} />
 

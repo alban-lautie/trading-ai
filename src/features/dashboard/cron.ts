@@ -1,9 +1,9 @@
 import "server-only"
 
-import { buildDailySummaryPositions } from "@/features/dashboard/summary-input"
-import { composeDailySummary } from "@/lib/ai/claude"
-import type { Quote } from "@/lib/market-data"
-import { computePositionMetrics, summarizePortfolio } from "@/lib/portfolio"
+import { generateDailySummary } from "@/features/dashboard/daily-summary"
+import { getRecommendations } from "@/features/positions/recommendations"
+import { getStoredQuotesWith } from "@/features/quotes/queries"
+import { computePositionMetrics } from "@/lib/portfolio"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type { Position } from "@/lib/types"
 
@@ -32,25 +32,7 @@ export async function runDailySummaries(): Promise<DailySummaryRunResult> {
   }
 
   const symbols = [...new Set(positions.map((p) => p.symbol.toUpperCase()))]
-  const { data: quoteRows } = await supabase
-    .from("quotes")
-    .select("*")
-    .in("symbol", symbols)
-
-  const quotes = new Map<string, Quote>(
-    (quoteRows ?? []).map((row) => [
-      row.symbol.toUpperCase(),
-      {
-        symbol: row.symbol,
-        name: row.name,
-        price: Number(row.price),
-        change: Number(row.change),
-        changePercent: Number(row.change_percent),
-        currency: row.currency,
-        timestamp: new Date(row.updated_at).getTime(),
-      },
-    ])
-  )
+  const quotes = await getStoredQuotesWith(supabase, symbols)
 
   const byUser = new Map<string, Position[]>()
   for (const position of positions) {
@@ -59,7 +41,6 @@ export async function runDailySummaries(): Promise<DailySummaryRunResult> {
     byUser.set(position.user_id, list)
   }
 
-  const today = new Date().toISOString().slice(0, 10)
   let generated = 0
 
   for (const [userId, userPositions] of byUser) {
@@ -69,27 +50,12 @@ export async function runDailySummaries(): Promise<DailySummaryRunResult> {
         quotes.get(position.symbol.toUpperCase()) ?? null
       )
     )
-    const summary = summarizePortfolio(rows)
+    const recommendations = await getRecommendations(
+      supabase,
+      userPositions.map((position) => position.id)
+    )
 
-    let content: string
-    try {
-      content = await composeDailySummary({
-        totalValue: summary.marketValue,
-        totalPnlPercent: summary.unrealizedPnlPercent,
-        positions: buildDailySummaryPositions(rows, summary.marketValue),
-      })
-    } catch {
-      // Skip this user (e.g. AI unavailable); others still run.
-      continue
-    }
-
-    const { error: upsertError } = await supabase
-      .from("daily_summaries")
-      .upsert(
-        { user_id: userId, summary_date: today, content },
-        { onConflict: "user_id,summary_date" }
-      )
-    if (!upsertError) {
+    if (await generateDailySummary(supabase, userId, rows, recommendations)) {
       generated += 1
     }
   }
