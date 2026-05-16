@@ -153,3 +153,102 @@ Plus bas 52 semaines : ${input.fiftyTwoWeekLow ?? "n/a"}`
     .join("\n")
     .trim()
 }
+
+/** Stable system instructions for the daily portfolio summary. */
+const DAILY_SUMMARY_SYSTEM_PROMPT = `Tu es un assistant d'aide à la décision
+pour une application de suivi de portefeuille d'actions. À partir d'un
+instantané du portefeuille de l'utilisateur, tu produis un résumé quotidien
+actionnable dont l'objectif est de l'aider à savoir QUOI VENDRE et QUAND.
+
+Structure ta réponse en français avec exactement ces sections, chacune
+introduite par son titre seul sur sa ligne :
+
+Météo du portefeuille
+Une phrase sur la performance du jour et la tendance générale.
+
+À vendre / alléger en priorité
+1 à 3 positions classées par priorité. Pour chacune : le titre, la raison
+(objectif de plus-value atteint, tendance qui se retourne, ligne surpondérée,
+perte qui s'aggrave) et le QUAND (niveau de prix ou condition déclencheuse).
+Si rien ne justifie une vente, dis-le clairement.
+
+À renforcer / opportunités
+Positions intéressantes à renforcer, ou « Rien à signaler ».
+
+À conserver
+Les positions où il ne faut rien faire, pour éviter le sur-trading.
+
+Point de vigilance
+Un risque clé (concentration, exposition sectorielle, perte importante).
+
+Sois concret et chiffré, environ 250 mots. Tu n'es pas conseiller financier :
+ne donne pas d'ordre d'achat ou de vente définitif et termine par une ligne
+rappelant que ce n'est pas un conseil en investissement.`
+
+export interface DailySummaryPosition {
+  symbol: string
+  name: string | null
+  weightPercent: number
+  pnlPercent: number | null
+  dayChangePercent: number | null
+  currentPrice: number | null
+  takeProfit: number
+  stopLoss: number
+  currency: string
+}
+
+export interface DailySummaryInput {
+  totalValue: number
+  totalPnlPercent: number
+  positions: DailySummaryPosition[]
+}
+
+/** Generates the daily, decision-oriented portfolio summary. */
+export async function composeDailySummary(
+  input: DailySummaryInput
+): Promise<string> {
+  const lines = input.positions
+    .map((position) => {
+      const pnl =
+        position.pnlPercent === null
+          ? "n/a"
+          : `${(position.pnlPercent * 100).toFixed(1)} %`
+      const day =
+        position.dayChangePercent === null
+          ? "n/a"
+          : `${position.dayChangePercent.toFixed(2)} %`
+      const price =
+        position.currentPrice === null
+          ? "n/a"
+          : position.currentPrice.toFixed(2)
+      return `- ${position.symbol}${position.name ? ` (${position.name})` : ""} : poids ${position.weightPercent.toFixed(1)} %, cours ${price} ${position.currency}, P/L ${pnl}, variation du jour ${day}, objectif de prise de bénéfices ${position.takeProfit.toFixed(2)}, stop ${position.stopLoss.toFixed(2)}`
+    })
+    .join("\n")
+
+  const userPrompt = `Instantané du portefeuille.
+
+Valeur totale : ${input.totalValue.toFixed(2)}
+Performance latente globale : ${(input.totalPnlPercent * 100).toFixed(2)} %
+
+Positions :
+${lines || "(aucune position)"}`
+
+  const message = await getClient().messages.create({
+    model: MODEL,
+    max_tokens: MAX_TOKENS,
+    system: [
+      {
+        type: "text",
+        text: DAILY_SUMMARY_SYSTEM_PROMPT,
+        cache_control: { type: "ephemeral" },
+      },
+    ],
+    messages: [{ role: "user", content: userPrompt }],
+  })
+
+  return message.content
+    .filter((block): block is Anthropic.TextBlock => block.type === "text")
+    .map((block) => block.text)
+    .join("\n")
+    .trim()
+}

@@ -1,15 +1,26 @@
 import type { Metadata } from "next"
 
+import { DailySummaryCard } from "@/components/dashboard/daily-summary-card"
+import { PortfolioValueChart } from "@/components/dashboard/portfolio-value-chart"
 import { PortfolioSummaryCards } from "@/components/positions/portfolio-summary-cards"
 import { PositionDialog } from "@/components/positions/position-dialog"
 import { PositionsTable } from "@/components/positions/positions-table"
 import { Button } from "@/components/ui/button"
+import {
+  getDailySummary,
+  getPortfolioValueHistory,
+} from "@/features/dashboard/queries"
 import { getPortfolio } from "@/features/positions/queries"
 
 export const metadata: Metadata = { title: "Tableau de bord" }
 
 export default async function DashboardPage() {
-  const { rows, summary, quotesError } = await getPortfolio()
+  const [{ rows, summary, quotesError }, valueHistory, dailySummary] =
+    await Promise.all([
+      getPortfolio(),
+      getPortfolioValueHistory(),
+      getDailySummary(),
+    ])
 
   return (
     <div className="space-y-6">
@@ -27,6 +38,11 @@ export default async function DashboardPage() {
       ) : null}
 
       <PortfolioSummaryCards summary={summary} />
+
+      <PortfolioValueChart points={valueHistory} />
+
+      <DailySummaryCard initialSummary={dailySummary} />
+
       <PositionsTable rows={rows} />
     </div>
   )
