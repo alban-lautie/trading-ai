@@ -3,6 +3,12 @@ import "server-only"
 import { requireUser } from "@/features/auth"
 import { getQuotesWithFallback } from "@/features/quotes/queries"
 import {
+  getPriceHistory,
+  getStockNews,
+  type NewsItem,
+  type PriceHistory,
+} from "@/lib/market-data"
+import {
   computePositionMetrics,
   summarizePortfolio,
   type PortfolioSummary,
@@ -70,47 +76,55 @@ export async function listPositions(): Promise<Position[]> {
 export interface PositionDetail {
   metrics: PositionWithMetrics
   alerts: Alert[]
+  history: PriceHistory | null
+  news: NewsItem[]
+  /** Share of the total portfolio value held in this position. */
+  portfolioWeight: number | null
 }
 
 /**
- * Fetches a single position owned by the current user, enriched with its live
- * quote and the alerts attached to it. Returns `null` when the position does
- * not exist or does not belong to the user.
+ * Fetches everything the position detail page needs: the position's live
+ * metrics, its weight in the portfolio, price history, recent news and the
+ * alerts attached to it. Returns `null` when the position does not exist or
+ * does not belong to the user.
  */
 export async function getPositionDetail(
   id: string
 ): Promise<PositionDetail | null> {
-  const { user, supabase } = await requireUser()
-
-  const { data: position, error } = await supabase
-    .from("positions")
-    .select("*")
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .maybeSingle()
-
-  if (error) {
-    throw new Error(`Failed to load position: ${error.message}`)
-  }
-  if (!position) {
+  const portfolio = await getPortfolio()
+  const metrics = portfolio.rows.find((row) => row.position.id === id)
+  if (!metrics) {
     return null
   }
 
-  const { quotes } = await getQuotesWithFallback([position.symbol])
-  const metrics = computePositionMetrics(
-    position,
-    quotes.get(position.symbol.toUpperCase()) ?? null
-  )
+  const { symbol } = metrics.position
+  const { supabase } = await requireUser()
 
-  const { data: alerts, error: alertsError } = await supabase
-    .from("alerts")
-    .select("*")
-    .eq("position_id", id)
-    .order("created_at", { ascending: false })
+  const [history, news, alertsResult] = await Promise.all([
+    getPriceHistory(symbol, "6mo").catch(() => null),
+    getStockNews(symbol),
+    supabase
+      .from("alerts")
+      .select("*")
+      .eq("position_id", id)
+      .order("created_at", { ascending: false }),
+  ])
 
-  if (alertsError) {
-    throw new Error(`Failed to load alerts: ${alertsError.message}`)
+  if (alertsResult.error) {
+    throw new Error(`Failed to load alerts: ${alertsResult.error.message}`)
   }
 
-  return { metrics, alerts: alerts ?? [] }
+  const total = portfolio.summary.marketValue
+  const portfolioWeight =
+    metrics.marketValue !== null && total > 0
+      ? metrics.marketValue / total
+      : null
+
+  return {
+    metrics,
+    alerts: alertsResult.data ?? [],
+    history,
+    news,
+    portfolioWeight,
+  }
 }

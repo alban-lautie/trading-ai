@@ -28,3 +28,34 @@ export class MarketDataError extends Error {
     this.name = "MarketDataError"
   }
 }
+
+/** Supported ranges for the price history chart. */
+export type ChartRange = "1mo" | "6mo" | "1y"
+
+/** A single point on the price history curve. */
+export interface PricePoint {
+  /** ISO date, `yyyy-mm-dd`. */
+  date: string
+  close: number
+}
+
+/** Price history of a symbol plus the high/low reference levels. */
+export interface PriceHistory {
+  range: ChartRange
+  points: PricePoint[]
+  currency: string
+  fiftyTwoWeekHigh: number | null
+  fiftyTwoWeekLow: number | null
+  dayHigh: number | null
+  dayLow: number | null
+}
+
+/** A news article about a symbol. */
+export interface NewsItem {
+  id: string
+  title: string
+  url: string
+  publisher: string
+  /** Publication time, Unix epoch in milliseconds. */
+  publishedAt: number
+}

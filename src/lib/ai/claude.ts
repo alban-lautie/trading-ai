@@ -92,3 +92,64 @@ export async function generatePortfolioAnalysis(
     .join("\n")
     .trim()
 }
+
+/** Stable system instructions for the per-position insight. */
+const POSITION_SYSTEM_PROMPT = `Tu es un assistant d'aide à la décision pour une
+application de suivi de portefeuille. Tu reçois une position (une action
+détenue par l'utilisateur) et tu produis une lecture courte et concrète : la
+tendance, le positionnement du cours dans son range 52 semaines, le niveau
+d'entrée de l'utilisateur, et les points de vigilance. Tu n'es pas conseiller
+financier : ne donne jamais d'ordre d'achat ou de vente explicite et rappelle
+que ce n'est pas un conseil en investissement. Réponds en français, en moins
+de 180 mots, en paragraphes simples.`
+
+export interface PositionInsightInput {
+  symbol: string
+  name: string | null
+  quantity: number
+  averagePrice: number
+  currentPrice: number | null
+  currency: string
+  unrealizedPnlPercent: number | null
+  fiftyTwoWeekHigh: number | null
+  fiftyTwoWeekLow: number | null
+}
+
+/** Generates a short, decision-oriented insight for a single position. */
+export async function generatePositionInsight(
+  input: PositionInsightInput
+): Promise<string> {
+  const pnl =
+    input.unrealizedPnlPercent === null
+      ? "n/a"
+      : `${(input.unrealizedPnlPercent * 100).toFixed(2)} %`
+
+  const userPrompt = `Analyse cette position.
+
+Action : ${input.symbol}${input.name ? ` (${input.name})` : ""}
+Quantité : ${input.quantity}
+Prix d'achat moyen : ${input.averagePrice} ${input.currency}
+Cours actuel : ${input.currentPrice ?? "indisponible"} ${input.currency}
+Plus/moins-value latente : ${pnl}
+Plus haut 52 semaines : ${input.fiftyTwoWeekHigh ?? "n/a"}
+Plus bas 52 semaines : ${input.fiftyTwoWeekLow ?? "n/a"}`
+
+  const message = await getClient().messages.create({
+    model: MODEL,
+    max_tokens: MAX_TOKENS,
+    system: [
+      {
+        type: "text",
+        text: POSITION_SYSTEM_PROMPT,
+        cache_control: { type: "ephemeral" },
+      },
+    ],
+    messages: [{ role: "user", content: userPrompt }],
+  })
+
+  return message.content
+    .filter((block): block is Anthropic.TextBlock => block.type === "text")
+    .map((block) => block.text)
+    .join("\n")
+    .trim()
+}

@@ -4,9 +4,13 @@ import { notFound } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 
 import { AlertsList } from "@/components/alerts/alerts-list"
+import { PositionBenchmarks } from "@/components/positions/position-benchmarks"
 import { PositionDetailActions } from "@/components/positions/position-detail-actions"
 import { PositionInfoCard } from "@/components/positions/position-info-card"
+import { PositionInsight } from "@/components/positions/position-insight"
 import { PositionMetricCards } from "@/components/positions/position-metric-cards"
+import { PositionNews } from "@/components/positions/position-news"
+import { PositionPriceChart } from "@/components/positions/position-price-chart"
 import { getPositionDetail } from "@/features/positions/queries"
 
 interface PositionDetailPageProps {
@@ -30,7 +34,7 @@ export default async function PositionDetailPage({
     notFound()
   }
 
-  const { metrics, alerts } = detail
+  const { metrics, alerts, history, news, portfolioWeight } = detail
   const { position } = metrics
 
   return (
@@ -56,7 +60,21 @@ export default async function PositionDetailPage({
       </header>
 
       <PositionMetricCards metrics={metrics} />
-      <PositionInfoCard position={position} />
+
+      <PositionPriceChart symbol={position.symbol} initialHistory={history} />
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <PositionBenchmarks
+          metrics={metrics}
+          history={history}
+          portfolioWeight={portfolioWeight}
+        />
+        <PositionInfoCard position={position} />
+      </div>
+
+      <PositionInsight positionId={position.id} />
+
+      <PositionNews news={news} />
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold tracking-tight">

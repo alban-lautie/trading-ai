@@ -3,8 +3,19 @@ import "server-only"
 import { fetchYahooQuotes } from "@/lib/market-data/yahoo"
 import type { Quote } from "@/lib/market-data/types"
 
-export type { Quote } from "@/lib/market-data/types"
+export type {
+  Quote,
+  ChartRange,
+  PriceHistory,
+  PricePoint,
+  NewsItem,
+} from "@/lib/market-data/types"
 export { MarketDataError } from "@/lib/market-data/types"
+
+/** Fetches the price history of a symbol for a given range. */
+export { fetchYahooChart as getPriceHistory } from "@/lib/market-data/chart"
+/** Fetches recent news for a symbol (best-effort, never throws). */
+export { fetchYahooNews as getStockNews } from "@/lib/market-data/news"
 
 /**
  * Public entry point for market data. The rest of the app imports quotes
