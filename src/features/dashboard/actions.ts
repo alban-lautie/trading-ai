@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache"
 
 import { requireUser } from "@/features/auth"
+import { buildDailySummaryPositions } from "@/features/dashboard/summary-input"
 import { getPortfolio } from "@/features/positions/queries"
-import { buildPositionProposals } from "@/features/positions/proposals"
 import { composeDailySummary } from "@/lib/ai/claude"
 
 export interface DailySummaryResult {
@@ -24,36 +24,12 @@ export async function generateDailySummary(): Promise<DailySummaryResult> {
     return { error: "Ajoutez des positions pour générer un résumé." }
   }
 
-  const positions = rows.map((row) => {
-    const proposals = buildPositionProposals(row)
-    const takeProfit =
-      proposals.find((p) => p.kind === "take_profit")?.targetPrice ?? 0
-    const stopLoss =
-      proposals.find((p) => p.kind === "stop_loss")?.targetPrice ?? 0
-    const weightPercent =
-      summary.marketValue > 0 && row.marketValue !== null
-        ? (row.marketValue / summary.marketValue) * 100
-        : 0
-
-    return {
-      symbol: row.position.symbol,
-      name: row.position.name,
-      weightPercent,
-      pnlPercent: row.unrealizedPnlPercent,
-      dayChangePercent: row.quote?.changePercent ?? null,
-      currentPrice: row.quote?.price ?? null,
-      takeProfit,
-      stopLoss,
-      currency: row.position.currency,
-    }
-  })
-
   let content: string
   try {
     content = await composeDailySummary({
       totalValue: summary.marketValue,
       totalPnlPercent: summary.unrealizedPnlPercent,
-      positions,
+      positions: buildDailySummaryPositions(rows, summary.marketValue),
     })
   } catch (cause) {
     return {
