@@ -1,18 +1,11 @@
-import { PositionRowActions } from "@/components/positions/position-row-actions"
+import { PositionTableRow } from "@/components/positions/position-table-row"
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  formatCurrency,
-  formatPercent,
-  formatSignedCurrency,
-  pnlColorClass,
-} from "@/lib/format"
 import type { PositionWithMetrics } from "@/lib/portfolio"
 
 interface PositionsTableProps {
@@ -45,62 +38,9 @@ export function PositionsTable({ rows }: PositionsTableProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map(({ position, quote, marketValue, unrealizedPnl, unrealizedPnlPercent }) => {
-            const currency = position.currency
-            return (
-              <TableRow key={position.id}>
-                <TableCell>
-                  <div className="font-medium">{position.symbol}</div>
-                  {position.name ? (
-                    <div className="text-muted-foreground text-xs">
-                      {position.name}
-                    </div>
-                  ) : null}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {Number(position.quantity)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {formatCurrency(Number(position.average_price), currency)}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {quote ? (
-                    formatCurrency(quote.price, quote.currency)
-                  ) : (
-                    <span className="text-muted-foreground">indisponible</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {marketValue !== null ? (
-                    formatCurrency(marketValue, currency)
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </TableCell>
-                <TableCell
-                  className={`text-right tabular-nums ${pnlColorClass(unrealizedPnl)}`}
-                >
-                  {unrealizedPnl !== null ? (
-                    formatSignedCurrency(unrealizedPnl, currency)
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </TableCell>
-                <TableCell
-                  className={`text-right tabular-nums ${pnlColorClass(unrealizedPnlPercent)}`}
-                >
-                  {unrealizedPnlPercent !== null ? (
-                    formatPercent(unrealizedPnlPercent)
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <PositionRowActions position={position} />
-                </TableCell>
-              </TableRow>
-            )
-          })}
+          {rows.map((row) => (
+            <PositionTableRow key={row.position.id} row={row} />
+          ))}
         </TableBody>
       </Table>
     </div>

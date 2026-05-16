@@ -10,7 +10,7 @@ export function AlertsList({ alerts }: AlertsListProps) {
   if (alerts.length === 0) {
     return (
       <p className="text-muted-foreground rounded-lg border border-dashed p-8 text-center text-sm">
-        Aucune alerte. Créez-en une pour être notifié par email.
+        Aucune alerte. Créez-en une pour être notifié sur Telegram.
       </p>
     )
   }

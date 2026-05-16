@@ -19,7 +19,10 @@ const SECTION_LABELS: Record<string, string> = {
 /** Shows the current application section in the app header. */
 export function AppBreadcrumb() {
   const pathname = usePathname()
-  const label = SECTION_LABELS[pathname] ?? "Trading AI"
+  const section = Object.entries(SECTION_LABELS).find(
+    ([path]) => pathname === path || pathname.startsWith(`${path}/`)
+  )
+  const label = section?.[1] ?? "Trading AI"
 
   return (
     <Breadcrumb>

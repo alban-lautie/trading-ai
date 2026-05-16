@@ -1,15 +1,14 @@
 import "server-only"
 
 import { requireUser } from "@/features/auth"
-import { getStoredQuotes } from "@/features/quotes/queries"
-import { getQuotes, MarketDataError, type Quote } from "@/lib/market-data"
+import { getQuotesWithFallback } from "@/features/quotes/queries"
 import {
   computePositionMetrics,
   summarizePortfolio,
   type PortfolioSummary,
   type PositionWithMetrics,
 } from "@/lib/portfolio"
-import type { Position } from "@/lib/types"
+import type { Alert, Position } from "@/lib/types"
 
 export interface PortfolioData {
   rows: PositionWithMetrics[]
@@ -33,38 +32,9 @@ export async function getPortfolio(): Promise<PortfolioData> {
   }
 
   const positions: Position[] = data ?? []
-  const symbols = positions.map((position) => position.symbol)
-
-  let quotesError: string | null = null
-  let quotes = new Map<string, Quote>()
-
-  // Prefer the quotes kept fresh by the refresh cron.
-  try {
-    quotes = await getStoredQuotes(symbols)
-  } catch {
-    quotes = new Map()
-  }
-
-  // Symbols not yet in the store (e.g. a position added since the last cron
-  // run) are fetched live so the dashboard is never stale on first view.
-  const missing = symbols.filter(
-    (symbol) => !quotes.has(symbol.toUpperCase())
+  const { quotes, error: quotesError } = await getQuotesWithFallback(
+    positions.map((position) => position.symbol)
   )
-  if (missing.length > 0) {
-    try {
-      const live = await getQuotes(missing)
-      for (const [symbol, quote] of live) {
-        quotes.set(symbol, quote)
-      }
-    } catch (cause) {
-      if (quotes.size === 0) {
-        quotesError =
-          cause instanceof MarketDataError
-            ? cause.message
-            : "Live quotes are temporarily unavailable."
-      }
-    }
-  }
 
   const rows = positions.map((position) =>
     computePositionMetrics(
@@ -95,4 +65,52 @@ export async function listPositions(): Promise<Position[]> {
   }
 
   return data ?? []
+}
+
+export interface PositionDetail {
+  metrics: PositionWithMetrics
+  alerts: Alert[]
+}
+
+/**
+ * Fetches a single position owned by the current user, enriched with its live
+ * quote and the alerts attached to it. Returns `null` when the position does
+ * not exist or does not belong to the user.
+ */
+export async function getPositionDetail(
+  id: string
+): Promise<PositionDetail | null> {
+  const { user, supabase } = await requireUser()
+
+  const { data: position, error } = await supabase
+    .from("positions")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .maybeSingle()
+
+  if (error) {
+    throw new Error(`Failed to load position: ${error.message}`)
+  }
+  if (!position) {
+    return null
+  }
+
+  const { quotes } = await getQuotesWithFallback([position.symbol])
+  const metrics = computePositionMetrics(
+    position,
+    quotes.get(position.symbol.toUpperCase()) ?? null
+  )
+
+  const { data: alerts, error: alertsError } = await supabase
+    .from("alerts")
+    .select("*")
+    .eq("position_id", id)
+    .order("created_at", { ascending: false })
+
+  if (alertsError) {
+    throw new Error(`Failed to load alerts: ${alertsError.message}`)
+  }
+
+  return { metrics, alerts: alerts ?? [] }
 }

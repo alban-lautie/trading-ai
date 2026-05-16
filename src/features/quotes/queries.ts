@@ -1,6 +1,6 @@
 import "server-only"
 
-import type { Quote } from "@/lib/market-data"
+import { getQuotes, MarketDataError, type Quote } from "@/lib/market-data"
 import { createClient } from "@/lib/supabase/server"
 
 /**
@@ -38,4 +38,44 @@ export async function getStoredQuotes(
   }
 
   return result
+}
+
+/**
+ * Resolves quotes for the given symbols, preferring the cron-refreshed store
+ * and falling back to a live fetch for symbols not yet stored. `error` is set
+ * only when no quote at all could be obtained.
+ */
+export async function getQuotesWithFallback(symbols: string[]): Promise<{
+  quotes: Map<string, Quote>
+  error: string | null
+}> {
+  let quotes = new Map<string, Quote>()
+  try {
+    quotes = await getStoredQuotes(symbols)
+  } catch {
+    quotes = new Map()
+  }
+
+  const missing = symbols.filter(
+    (symbol) => !quotes.has(symbol.toUpperCase())
+  )
+  let error: string | null = null
+
+  if (missing.length > 0) {
+    try {
+      const live = await getQuotes(missing)
+      for (const [symbol, quote] of live) {
+        quotes.set(symbol, quote)
+      }
+    } catch (cause) {
+      if (quotes.size === 0) {
+        error =
+          cause instanceof MarketDataError
+            ? cause.message
+            : "Live quotes are temporarily unavailable."
+      }
+    }
+  }
+
+  return { quotes, error }
 }
