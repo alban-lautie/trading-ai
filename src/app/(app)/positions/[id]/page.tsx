@@ -10,6 +10,7 @@ import { PositionInfoCard } from "@/components/positions/position-info-card"
 import { PositionInsight } from "@/components/positions/position-insight"
 import { PositionMetricCards } from "@/components/positions/position-metric-cards"
 import { PositionNews } from "@/components/positions/position-news"
+import { PositionProposals } from "@/components/positions/position-proposals"
 import { PositionPriceChart } from "@/components/positions/position-price-chart"
 import { getPositionDetail } from "@/features/positions/queries"
 
@@ -71,6 +72,8 @@ export default async function PositionDetailPage({
         />
         <PositionInfoCard position={position} />
       </div>
+
+      <PositionProposals metrics={metrics} />
 
       <PositionInsight positionId={position.id} />
 
