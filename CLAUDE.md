@@ -26,10 +26,13 @@ Application web de suivi de portefeuille d'actions. L'utilisateur saisit ses pos
 - Actions cotées uniquement (US + Europe), multi-devises.
 
 ### Alertes
-- L'utilisateur définit des alertes par position (seuil de prix, seuil de % de variation).
+- L'utilisateur définit des alertes par position : seuil de cours, variation
+  du jour, ou plus/moins-value latente par rapport au prix d'achat.
+- Un **cron** (`pg_cron`, toutes les 5 min) appelle `POST /api/cron/evaluate-alerts`
+  qui évalue chaque alerte active contre le dernier cours stocké.
 - Déclenchement → notification **Telegram** (l'utilisateur connecte son compte
-  Telegram via un bot dédié, configuré avec `TELEGRAM_BOT_TOKEN`).
-- L'évaluation périodique des seuils n'est pas encore câblée.
+  Telegram via un bot dédié, configuré avec `TELEGRAM_BOT_TOKEN`). Une alerte
+  déclenchée est désactivée pour ne pas se répéter.
 
 ### Suivi IA paramétrable
 - Analyse du portefeuille par Claude (API Anthropic).
