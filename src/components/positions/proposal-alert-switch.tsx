@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useOptimistic, useTransition } from "react"
 import { toast } from "sonner"
 
 import { Switch } from "@/components/ui/switch"
@@ -15,7 +15,14 @@ interface ProposalAlertSwitchProps {
   initialActive: boolean
 }
 
-/** Switch that arms or disarms the alert for a position-action proposal. */
+/**
+ * Switch that arms or disarms the alert for a position-action proposal.
+ *
+ * The checked state is derived from `initialActive` (the real alert state on
+ * the server) through `useOptimistic`, so it stays correct after a
+ * recommendation is generated and the page revalidates — a plain `useState`
+ * mirror would keep its stale initial value.
+ */
 export function ProposalAlertSwitch({
   positionId,
   kind,
@@ -24,12 +31,12 @@ export function ProposalAlertSwitch({
   percent,
   initialActive,
 }: ProposalAlertSwitchProps) {
-  const [active, setActive] = useState(initialActive)
   const [isPending, startTransition] = useTransition()
+  const [active, setActive] = useOptimistic(initialActive)
 
   function handleToggle(next: boolean) {
-    setActive(next)
     startTransition(async () => {
+      setActive(next)
       const result = await setProposalAlert({
         positionId,
         kind,
@@ -39,7 +46,6 @@ export function ProposalAlertSwitch({
         enabled: next,
       })
       if (result.error) {
-        setActive(!next)
         toast.error(result.error)
         return
       }
