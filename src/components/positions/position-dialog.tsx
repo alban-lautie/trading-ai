@@ -17,8 +17,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { IntentionField } from "@/components/positions/intention-field"
+import { SelectField } from "@/components/positions/select-field"
 import { createPosition, updatePosition } from "@/features/positions/actions"
+import { CURRENCY_OPTIONS } from "@/features/positions/currencies"
 import {
   POSITION_HORIZON_OPTIONS,
   POSITION_OBJECTIVE_OPTIONS,
@@ -159,10 +160,12 @@ export function PositionDialog({ position, trigger }: PositionDialogProps) {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="currency">Devise</Label>
-              <Input id="currency" maxLength={3} {...register("currency")} />
-            </div>
+            <SelectField
+              control={control}
+              name="currency"
+              label="Devise"
+              options={CURRENCY_OPTIONS}
+            />
             <div className="grid gap-2">
               <Label htmlFor="openedAt">Date d&apos;achat</Label>
               <Input id="openedAt" type="date" {...register("openedAt")} />
@@ -175,13 +178,13 @@ export function PositionDialog({ position, trigger }: PositionDialogProps) {
             </p>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <IntentionField
+            <SelectField
               control={control}
               name="objective"
               label="Objectif"
               options={POSITION_OBJECTIVE_OPTIONS}
             />
-            <IntentionField
+            <SelectField
               control={control}
               name="horizon"
               label="Horizon"
@@ -189,7 +192,7 @@ export function PositionDialog({ position, trigger }: PositionDialogProps) {
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <IntentionField
+            <SelectField
               control={control}
               name="riskTolerance"
               label="Tolérance au risque"

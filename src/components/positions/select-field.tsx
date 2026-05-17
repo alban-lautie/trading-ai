@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-interface IntentionFieldProps<T extends FieldValues> {
+interface SelectFieldProps<T extends FieldValues> {
   control: Control<T>
   name: Path<T>
   label: string
@@ -24,12 +24,12 @@ interface IntentionFieldProps<T extends FieldValues> {
 }
 
 /** Labeled shadcn select bound to a react-hook-form controller. */
-export function IntentionField<T extends FieldValues>({
+export function SelectField<T extends FieldValues>({
   control,
   name,
   label,
   options,
-}: IntentionFieldProps<T>) {
+}: SelectFieldProps<T>) {
   return (
     <div className="grid gap-2">
       <Label htmlFor={name}>{label}</Label>
