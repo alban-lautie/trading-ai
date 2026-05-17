@@ -9,6 +9,8 @@ export type {
   PriceHistory,
   PricePoint,
   NewsItem,
+  TechnicalIndicators,
+  StockFundamentals,
 } from "@/lib/market-data/types"
 export { MarketDataError } from "@/lib/market-data/types"
 
@@ -16,6 +18,10 @@ export { MarketDataError } from "@/lib/market-data/types"
 export { fetchYahooChart as getPriceHistory } from "@/lib/market-data/chart"
 /** Fetches recent news for a symbol (best-effort, never throws). */
 export { fetchYahooNews as getStockNews } from "@/lib/market-data/news"
+/** Computes technical indicators from a price history. */
+export { computeIndicators } from "@/lib/market-data/indicators"
+/** Fetches fundamentals and analyst data for a symbol (best-effort). */
+export { fetchYahooFundamentals as getStockFundamentals } from "@/lib/market-data/fundamentals"
 
 /**
  * Public entry point for market data. The rest of the app imports quotes

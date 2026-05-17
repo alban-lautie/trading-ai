@@ -9,15 +9,22 @@ import {
 } from "@/features/positions/intentions"
 import { generatePositionRecommendation } from "@/lib/ai/claude"
 import type { Database } from "@/lib/database.types"
-import { getPriceHistory, getStockNews } from "@/lib/market-data"
+import {
+  computeIndicators,
+  getPriceHistory,
+  getStockFundamentals,
+  getStockNews,
+} from "@/lib/market-data"
 import type { PriceHistory } from "@/lib/market-data"
 import type { PositionWithMetrics } from "@/lib/portfolio"
 import type { AlertType, Position, PositionRecommendation } from "@/lib/types"
 
-/** Number of recent headlines passed to the recommendation prompt. */
-const NEWS_LIMIT = 6
+/** Number of recent news articles passed to the recommendation prompt. */
+const NEWS_LIMIT = 8
 /** Trading days used to annualize daily volatility. */
 const TRADING_DAYS = 252
+/** Milliseconds in a day, used to age news articles. */
+const DAY_MS = 86_400_000
 
 type Client = SupabaseClient<Database>
 
@@ -68,9 +75,10 @@ export async function runPositionRecommendation(
 ): Promise<PositionRecommendation | null> {
   const { position } = metrics
 
-  const [history, news] = await Promise.all([
-    getPriceHistory(position.symbol, "6mo").catch(() => null),
+  const [history, news, fundamentals] = await Promise.all([
+    getPriceHistory(position.symbol, "1y").catch(() => null),
     getStockNews(position.symbol),
+    getStockFundamentals(position.symbol),
   ])
 
   const currentPrice =
@@ -101,7 +109,16 @@ export async function runPositionRecommendation(
       fiftyTwoWeekHigh: history?.fiftyTwoWeekHigh ?? null,
       fiftyTwoWeekLow: history?.fiftyTwoWeekLow ?? null,
       volatilityPercent: computeVolatility(history),
-      newsHeadlines: news.slice(0, NEWS_LIMIT).map((item) => item.title),
+      indicators: history ? computeIndicators(history.points) : null,
+      fundamentals,
+      news: news.slice(0, NEWS_LIMIT).map((item) => ({
+        title: item.title,
+        publisher: item.publisher,
+        ageDays: Math.max(
+          0,
+          Math.floor((Date.now() - item.publishedAt) / DAY_MS)
+        ),
+      })),
       portfolioTotalValue: context.portfolioTotalValue,
       portfolioPnlPercent: context.portfolioPnlPercent,
       positionCount: context.positionCount,

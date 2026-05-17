@@ -2,6 +2,10 @@ import "server-only"
 
 import Anthropic from "@anthropic-ai/sdk"
 
+import type {
+  StockFundamentals,
+  TechnicalIndicators,
+} from "@/lib/market-data"
 import type { PortfolioSummary, PositionWithMetrics } from "@/lib/portfolio"
 import type {
   AiMonitoringConfig,
@@ -163,8 +167,9 @@ const RECOMMENDATION_SYSTEM_PROMPT = `Tu es un moteur de recommandation pour une
 application de suivi de portefeuille d'actions. Pour une position donnée, tu
 détermines l'action recommandée et des niveaux de prix concrets, en tenant
 compte de l'intention de l'utilisateur sur cette position, du cours et de sa
-dynamique, de la volatilité, des actualités récentes et du poids de la ligne
-dans le portefeuille.
+dynamique, de la volatilité, des indicateurs techniques, des fondamentaux, des
+objectifs de cours des analystes, des actualités récentes et du poids de la
+ligne dans le portefeuille.
 
 Règles :
 - Aligne la recommandation sur l'intention : un objectif « Gain rapide » avec un
@@ -174,10 +179,20 @@ Règles :
   rapport au prix d'achat moyen, sauf si le contexte le rend irréaliste.
 - L'objectif de vente est supérieur au cours actuel quand on vise une
   plus-value ; le stop de protection est inférieur au cours actuel.
+- Appuie-toi sur l'objectif de cours moyen des analystes et sur les résistances
+  récentes pour fixer un objectif de vente réaliste ; ne t'en écarte pas
+  fortement sans raison tirée des autres données.
+- Cale le stop de protection sous un support récent, ou à environ 1,5 à 2 fois
+  l'ATR sous le cours, en resserrant pour une tolérance au risque faible.
+- Un RSI supérieur à 70 signale un titre suracheté (objectif de vente plus
+  proche) ; inférieur à 30, un titre survendu. Un cours sous sa moyenne mobile
+  200 jours traduit une tendance de fond baissière, au-dessus une tendance
+  haussière. Un PER nettement élevé invite à la prudence sur le potentiel.
 - action = "sell_now" si le cours a déjà atteint un niveau de sortie
   raisonnable ; "reinforce" si un renfort à la baisse est pertinent ; sinon
   "hold".
-- conviction reflète ta confiance compte tenu des données disponibles.
+- conviction reflète ta confiance compte tenu des données disponibles : des
+  données fondamentales ou d'analystes manquantes la réduisent.
 - Une ligne très surpondérée (> 25 % du portefeuille) justifie un allègement
   plus prudent.
 - Si le cours est indisponible, mets les deux prix à null.
@@ -218,6 +233,14 @@ const RECOMMENDATION_TOOL: Anthropic.Tool = {
   },
 }
 
+/** A recent news article passed to the recommendation prompt. */
+export interface RecommendationNewsItem {
+  title: string
+  publisher: string
+  /** Whole days since publication. */
+  ageDays: number
+}
+
 export interface PositionRecommendationInput {
   symbol: string
   name: string | null
@@ -236,7 +259,11 @@ export interface PositionRecommendationInput {
   fiftyTwoWeekLow: number | null
   /** Annualized volatility in percent, when computable. */
   volatilityPercent: number | null
-  newsHeadlines: string[]
+  /** Technical indicators, or `null` when the history is too short. */
+  indicators: TechnicalIndicators | null
+  /** Fundamentals and analyst data (fields may be `null`). */
+  fundamentals: StockFundamentals
+  news: RecommendationNewsItem[]
   portfolioTotalValue: number
   portfolioPnlPercent: number
   positionCount: number
@@ -254,11 +281,35 @@ export interface PositionRecommendationResult {
 function buildRecommendationPrompt(input: PositionRecommendationInput): string {
   const pct = (value: number | null, digits = 2) =>
     value === null ? "n/a" : `${value.toFixed(digits)} %`
-  const num = (value: number | null) =>
-    value === null ? "indisponible" : value.toFixed(2)
+  const num = (value: number | null | undefined) =>
+    value === null || value === undefined ? "n/a" : value.toFixed(2)
+
+  const indicators = input.indicators
+  const f = input.fundamentals
+
+  const marketCap =
+    f.marketCap === null
+      ? "n/a"
+      : `${(f.marketCap / 1e9).toFixed(1)} Md ${input.currency}`
+  const dividendYield =
+    f.dividendYield === null
+      ? "n/a"
+      : `${(f.dividendYield * 100).toFixed(2)} %`
+  const analystCount = f.numberOfAnalysts
+    ? ` (${f.numberOfAnalysts} analystes)`
+    : ""
+
   const news =
-    input.newsHeadlines.length > 0
-      ? input.newsHeadlines.map((title) => `- ${title}`).join("\n")
+    input.news.length > 0
+      ? input.news
+          .map((item) => {
+            const age =
+              item.ageDays <= 0
+                ? "aujourd'hui"
+                : `il y a ${item.ageDays} j`
+            return `- [${age}, ${item.publisher}] ${item.title}`
+          })
+          .join("\n")
       : "(aucune actualité récente)"
 
   return `Analyse cette position et soumets une recommandation.
@@ -278,6 +329,27 @@ Intention de l'utilisateur :
 - Horizon : ${input.horizon}
 - Tolérance au risque : ${input.riskTolerance}
 - Gain cible : ${input.targetGainPercent === null ? "non fixé" : `${input.targetGainPercent} %`}
+
+Indicateurs techniques :
+- Moyenne mobile 50 jours : ${num(indicators?.sma50)}
+- Moyenne mobile 200 jours : ${num(indicators?.sma200)}
+- RSI 14 : ${indicators?.rsi14 == null ? "n/a" : indicators.rsi14.toFixed(0)}
+- ATR 14 (volatilité absolue) : ${num(indicators?.atr14)}
+- Support récent (plus bas 20 jours) : ${num(indicators?.recentLow)}
+- Résistance récente (plus haut 20 jours) : ${num(indicators?.recentHigh)}
+
+Objectifs des analystes :
+- Objectif de cours moyen : ${num(f.targetMeanPrice)} ${input.currency}
+- Fourchette : ${num(f.targetLowPrice)} – ${num(f.targetHighPrice)} ${input.currency}
+- Consensus : ${f.recommendationKey ?? "n/a"}${analystCount}
+
+Fondamentaux :
+- PER : ${num(f.trailingPE)}
+- PER prévisionnel : ${num(f.forwardPE)}
+- BPA : ${num(f.trailingEps)}
+- Capitalisation : ${marketCap}
+- Rendement du dividende : ${dividendYield}
+- Bêta : ${num(f.beta)}
 
 Contexte portefeuille :
 - Valeur totale : ${input.portfolioTotalValue.toFixed(2)}

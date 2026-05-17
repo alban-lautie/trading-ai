@@ -37,6 +37,52 @@ export interface PricePoint {
   /** ISO date, `yyyy-mm-dd`. */
   date: string
   close: number
+  /** Intraday high, when the provider returns one. */
+  high?: number | null
+  /** Intraday low, when the provider returns one. */
+  low?: number | null
+}
+
+/** Technical indicators derived from a symbol's price history. */
+export interface TechnicalIndicators {
+  /** 50-day simple moving average of the close. */
+  sma50: number | null
+  /** 200-day simple moving average of the close. */
+  sma200: number | null
+  /** 14-day Relative Strength Index (0–100). */
+  rsi14: number | null
+  /** 14-day Average True Range, an absolute volatility measure. */
+  atr14: number | null
+  /** Lowest close over the last 20 sessions — a recent support. */
+  recentLow: number | null
+  /** Highest close over the last 20 sessions — a recent resistance. */
+  recentHigh: number | null
+}
+
+/** Fundamentals and analyst data for a symbol, from Yahoo `quoteSummary`. */
+export interface StockFundamentals {
+  /** Mean analyst price target. */
+  targetMeanPrice: number | null
+  /** Highest analyst price target. */
+  targetHighPrice: number | null
+  /** Lowest analyst price target. */
+  targetLowPrice: number | null
+  /** Consensus key, e.g. `buy`, `hold`, `sell`. */
+  recommendationKey: string | null
+  /** Number of analysts behind the consensus. */
+  numberOfAnalysts: number | null
+  /** Trailing price-to-earnings ratio. */
+  trailingPE: number | null
+  /** Forward price-to-earnings ratio. */
+  forwardPE: number | null
+  /** Trailing earnings per share. */
+  trailingEps: number | null
+  /** Market capitalization. */
+  marketCap: number | null
+  /** Dividend yield, as a fraction (0.012 = 1.2%). */
+  dividendYield: number | null
+  /** Beta — sensitivity to the broad market. */
+  beta: number | null
 }
 
 /** Price history of a symbol plus the high/low reference levels. */

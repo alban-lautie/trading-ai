@@ -31,7 +31,13 @@ interface YahooChartResult {
     regularMarketDayLow?: number
   }
   timestamp?: number[]
-  indicators?: { quote?: { close?: (number | null)[] }[] }
+  indicators?: {
+    quote?: {
+      close?: (number | null)[]
+      high?: (number | null)[]
+      low?: (number | null)[]
+    }[]
+  }
 }
 
 /** Fetches the daily price history of a symbol for the given range. */
@@ -70,7 +76,10 @@ export async function fetchYahooChart(
   }
 
   const timestamps = result.timestamp ?? []
-  const closes = result.indicators?.quote?.[0]?.close ?? []
+  const quote = result.indicators?.quote?.[0]
+  const closes = quote?.close ?? []
+  const highs = quote?.high ?? []
+  const lows = quote?.low ?? []
   const points: PricePoint[] = []
   for (let i = 0; i < timestamps.length; i += 1) {
     const close = closes[i]
@@ -78,6 +87,8 @@ export async function fetchYahooChart(
     points.push({
       date: new Date(timestamps[i] * 1000).toISOString().slice(0, 10),
       close,
+      high: typeof highs[i] === "number" ? highs[i] : null,
+      low: typeof lows[i] === "number" ? lows[i] : null,
     })
   }
 
