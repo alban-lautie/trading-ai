@@ -91,15 +91,18 @@ export async function deleteAlert(alertId: string): Promise<ActionResult> {
   return { success: true }
 }
 
-const PROPOSAL_KINDS = ["take_profit", "stop_loss", "reinforce"]
+// take_profit, the numbered sell tiers (take_profit_1…), stop_loss, reinforce.
+const PROPOSAL_KIND_PATTERN = /^(take_profit(_[1-9])?|stop_loss|reinforce)$/
 const PROPOSAL_ALERT_TYPES: AlertType[] = ["price_above", "price_below"]
 
 export interface SetProposalAlertInput {
   positionId: string
-  /** Proposal this alert is armed from (take_profit, stop_loss, reinforce). */
+  /** Proposal this alert is armed from (take_profit_1, stop_loss, …). */
   kind: string
   alertType: string
   threshold: number
+  /** Share of the position to sell, for take-profit tiers. */
+  percent?: number | null
   enabled: boolean
 }
 
@@ -110,7 +113,7 @@ export interface SetProposalAlertInput {
 export async function setProposalAlert(
   input: SetProposalAlertInput
 ): Promise<ActionResult> {
-  if (!PROPOSAL_KINDS.includes(input.kind)) {
+  if (!PROPOSAL_KIND_PATTERN.test(input.kind)) {
     return { error: "Type de proposition invalide." }
   }
   if (!PROPOSAL_ALERT_TYPES.includes(input.alertType as AlertType)) {
@@ -155,6 +158,10 @@ export async function setProposalAlert(
       type: input.alertType as AlertType,
       threshold: Math.round(input.threshold * 100) / 100,
       proposal_kind: input.kind,
+      tranche_percent:
+        input.percent == null
+          ? null
+          : Math.round(input.percent * 100) / 100,
       is_active: true,
     })
 

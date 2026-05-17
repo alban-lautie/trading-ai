@@ -18,9 +18,9 @@ export function buildDailySummaryPositions(
     const recommendation = recommendations.get(row.position.id) ?? null
     const proposals = buildPositionProposals(row, recommendation)
     const takeProfit =
-      proposals.find((p) => p.kind === "take_profit")?.targetPrice ?? 0
+      proposals.find((p) => p.category === "take_profit")?.targetPrice ?? 0
     const stopLoss =
-      proposals.find((p) => p.kind === "stop_loss")?.targetPrice ?? 0
+      proposals.find((p) => p.category === "stop_loss")?.targetPrice ?? 0
     const weightPercent =
       totalMarketValue > 0 && row.marketValue !== null
         ? (row.marketValue / totalMarketValue) * 100

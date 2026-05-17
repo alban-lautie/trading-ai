@@ -49,18 +49,27 @@ function formatAlertMessage(
   type: AlertType,
   threshold: number,
   quote: QuoteSnapshot,
-  proposalKind: string | null
+  proposalKind: string | null,
+  tranchePercent: number | null
 ): string {
   const unit = isPercentAlertType(type) ? " %" : ""
   const condition = `Condition : ${ALERT_TYPE_LABELS[type]} ${threshold}${unit}`
   const price = `Cours actuel : ${quote.price} ${quote.currency}`
 
-  if (proposalKind === "take_profit") {
+  if (proposalKind && proposalKind.startsWith("take_profit")) {
+    const tier = proposalKind.split("_")[2]
+    const share =
+      tranchePercent === null
+        ? "tout ou partie de la position"
+        : `environ ${Math.round(tranchePercent)} % de la position`
+    const action = tier
+      ? `Palier de vente n°${tier} atteint — vends ${share}.`
+      : `Objectif de vente atteint — vends ${share}.`
     return [
       "🎯 *Trading AI* — Objectif de vente atteint",
       "",
       `*${symbol}*`,
-      "Le cours a atteint l'objectif de vente fixé par l'IA. C'est le moment de réaliser tout ou partie de la position.",
+      action,
       condition,
       price,
     ].join("\n")
@@ -98,7 +107,7 @@ export async function evaluateAlerts(): Promise<EvaluateResult> {
   const { data: alerts, error } = await supabase
     .from("alerts")
     .select(
-      "id, user_id, symbol, type, threshold, proposal_kind, position:positions(average_price)"
+      "id, user_id, symbol, type, threshold, proposal_kind, tranche_percent, position:positions(average_price)"
     )
     .eq("is_active", true)
     .is("triggered_at", null)
@@ -171,7 +180,8 @@ export async function evaluateAlerts(): Promise<EvaluateResult> {
           alert.type,
           threshold,
           quote,
-          alert.proposal_kind
+          alert.proposal_kind,
+          alert.tranche_percent
         )
       )
     } catch {

@@ -58,7 +58,9 @@ Application web de suivi de portefeuille d'actions. L'utilisateur saisit ses pos
   - Inbucket / mailpit : `54324` → `54524`
   - Analytics : `54327` → `54527`
 - Appliquer le même décalage de +200 à tout nouveau port Supabase ajouté.
-- Commandes : `npx supabase start`, `npx supabase stop`, `npx supabase db reset`.
+- Commandes : `npx supabase start`, `npx supabase stop`.
+- **Appliquer une migration** : utiliser `npx supabase migration up` (non destructif, conserve les données locales).
+- ⚠️ **Ne jamais lancer `npx supabase db reset`** : cette commande efface toutes les données locales. Ne l'utiliser qu'en dernier recours, lorsqu'il n'y a vraiment pas d'alternative, et **uniquement après avoir demandé et obtenu l'autorisation explicite de l'utilisateur**.
 
 ## Cours de bourse (Yahoo Finance)
 

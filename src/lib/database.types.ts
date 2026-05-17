@@ -103,6 +103,7 @@ export type Database = {
           proposal_kind: string | null
           symbol: string
           threshold: number
+          tranche_percent: number | null
           triggered_at: string | null
           type: Database["public"]["Enums"]["alert_type"]
           updated_at: string
@@ -116,6 +117,7 @@ export type Database = {
           proposal_kind?: string | null
           symbol: string
           threshold: number
+          tranche_percent?: number | null
           triggered_at?: string | null
           type: Database["public"]["Enums"]["alert_type"]
           updated_at?: string
@@ -129,6 +131,7 @@ export type Database = {
           proposal_kind?: string | null
           symbol?: string
           threshold?: number
+          tranche_percent?: number | null
           triggered_at?: string | null
           type?: Database["public"]["Enums"]["alert_type"]
           updated_at?: string
@@ -205,7 +208,7 @@ export type Database = {
           generated_at: string
           id: string
           position_id: string
-          sell_target_price: number | null
+          sell_targets: Json
           stop_loss_price: number | null
           user_id: string
         }
@@ -215,7 +218,7 @@ export type Database = {
           generated_at?: string
           id?: string
           position_id: string
-          sell_target_price?: number | null
+          sell_targets?: Json
           stop_loss_price?: number | null
           user_id: string
         }
@@ -225,7 +228,7 @@ export type Database = {
           generated_at?: string
           id?: string
           position_id?: string
-          sell_target_price?: number | null
+          sell_targets?: Json
           stop_loss_price?: number | null
           user_id?: string
         }

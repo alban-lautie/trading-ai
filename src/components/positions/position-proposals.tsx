@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card"
 import {
   buildPositionProposals,
-  type ProposalKind,
+  type ProposalCategory,
 } from "@/features/positions/proposals"
 import { formatCurrency } from "@/lib/format"
 import type { PositionWithMetrics } from "@/lib/portfolio"
@@ -30,7 +30,7 @@ interface PositionProposalsProps {
 }
 
 const KIND_META: Record<
-  ProposalKind,
+  ProposalCategory,
   { label: string; icon: LucideIcon; className: string }
 > = {
   take_profit: {
@@ -129,7 +129,7 @@ export function PositionProposals({
           </p>
         )}
         {proposals.map((proposal) => {
-          const meta = KIND_META[proposal.kind]
+          const meta = KIND_META[proposal.category]
           const Icon = meta.icon
           const hasAlert =
             proposal.targetPrice !== null && proposal.alertType !== null
@@ -156,9 +156,16 @@ export function PositionProposals({
                     </p>
                   </div>
                   {proposal.targetPrice !== null ? (
-                    <span className="text-sm font-semibold tabular-nums">
-                      {formatCurrency(proposal.targetPrice, currency)}
-                    </span>
+                    <div className="text-right">
+                      <span className="text-sm font-semibold tabular-nums">
+                        {formatCurrency(proposal.targetPrice, currency)}
+                      </span>
+                      {proposal.percent !== null ? (
+                        <p className="text-muted-foreground text-xs tabular-nums">
+                          vendre {Math.round(proposal.percent)} %
+                        </p>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
                 <p className="text-muted-foreground text-xs leading-relaxed">
@@ -171,6 +178,7 @@ export function PositionProposals({
                       kind={proposal.kind}
                       alertType={proposal.alertType as string}
                       targetPrice={proposal.targetPrice as number}
+                      percent={proposal.percent}
                       initialActive={alertActive}
                     />
                   </div>

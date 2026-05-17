@@ -16,6 +16,13 @@ export type PositionRecommendationInsert =
 export type RecommendationAction = Enums["recommendation_action"]
 export type ConvictionLevel = Enums["conviction_level"]
 
+/** One tier of a scaled-out exit: sell `percent` of the position at `price`. */
+export interface SellTarget {
+  price: number
+  /** Share of the position to sell at this level, in percent (1–100). */
+  percent: number
+}
+
 export type Alert = Tables["alerts"]["Row"]
 export type AlertInsert = Tables["alerts"]["Insert"]
 export type AlertType = Enums["alert_type"]

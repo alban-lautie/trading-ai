@@ -8,7 +8,7 @@ import {
   RISK_TOLERANCE_LABELS,
 } from "@/features/positions/intentions"
 import { generatePositionRecommendation } from "@/lib/ai/claude"
-import type { Database } from "@/lib/database.types"
+import type { Database, Json } from "@/lib/database.types"
 import {
   computeIndicators,
   getPriceHistory,
@@ -17,7 +17,12 @@ import {
 } from "@/lib/market-data"
 import type { PriceHistory } from "@/lib/market-data"
 import type { PositionWithMetrics } from "@/lib/portfolio"
-import type { AlertType, Position, PositionRecommendation } from "@/lib/types"
+import type {
+  AlertInsert,
+  Position,
+  PositionRecommendation,
+  SellTarget,
+} from "@/lib/types"
 
 /** Number of recent news articles passed to the recommendation prompt. */
 const NEWS_LIMIT = 8
@@ -105,6 +110,7 @@ export async function runPositionRecommendation(
           ? null
           : Number(position.target_gain_percent),
       currentPrice,
+      positionValue: metrics.marketValue,
       dayChangePercent: metrics.quote?.changePercent ?? null,
       fiftyTwoWeekHigh: history?.fiftyTwoWeekHigh ?? null,
       fiftyTwoWeekLow: history?.fiftyTwoWeekLow ?? null,
@@ -135,7 +141,7 @@ export async function runPositionRecommendation(
         position_id: position.id,
         user_id: position.user_id,
         action: result.action,
-        sell_target_price: result.sellTargetPrice,
+        sell_targets: result.sellTargets as unknown as Json,
         stop_loss_price: result.stopLossPrice,
         conviction: result.conviction,
         generated_at: new Date().toISOString(),
@@ -153,47 +159,55 @@ export async function runPositionRecommendation(
   return data
 }
 
+/** Rounds a price or percentage to two decimals. */
+function round2(value: number): number {
+  return Math.round(value * 100) / 100
+}
+
 /**
  * Replaces the alerts armed from this position's proposals so they always
- * match the latest recommendation: every previous take-profit / stop-loss
- * proposal alert is removed and a fresh active alert is created from the new
- * price levels. Alerts created manually (without a proposal kind) are left
- * untouched.
+ * match the latest recommendation: every previous proposal alert is removed
+ * and a fresh active alert is created for each sell tier (carrying the share
+ * to sell) plus the protective stop. Alerts created manually (without a
+ * proposal kind) are left untouched.
  */
 async function armProposalAlerts(
   supabase: Client,
   position: Position,
-  result: { sellTargetPrice: number | null; stopLossPrice: number | null }
+  result: { sellTargets: SellTarget[]; stopLossPrice: number | null }
 ): Promise<void> {
-  const specs: Array<{ kind: string; type: AlertType; price: number | null }> =
-    [
-      {
-        kind: "take_profit",
-        type: "price_above",
-        price: result.sellTargetPrice,
-      },
-      { kind: "stop_loss", type: "price_below", price: result.stopLossPrice },
-    ]
+  // Drop every alert previously armed from a proposal, whatever its state.
+  await supabase
+    .from("alerts")
+    .delete()
+    .eq("position_id", position.id)
+    .not("proposal_kind", "is", null)
 
-  for (const { kind, type, price } of specs) {
-    // Drop the alert previously armed from this proposal, whatever its state.
-    await supabase
-      .from("alerts")
-      .delete()
-      .eq("position_id", position.id)
-      .eq("proposal_kind", kind)
+  const rows: AlertInsert[] = result.sellTargets.map((target, index) => ({
+    user_id: position.user_id,
+    position_id: position.id,
+    symbol: position.symbol,
+    type: "price_above",
+    threshold: round2(target.price),
+    proposal_kind: `take_profit_${index + 1}`,
+    tranche_percent: round2(target.percent),
+    is_active: true,
+  }))
 
-    if (price !== null) {
-      await supabase.from("alerts").insert({
-        user_id: position.user_id,
-        position_id: position.id,
-        symbol: position.symbol,
-        type,
-        threshold: Math.round(price * 100) / 100,
-        proposal_kind: kind,
-        is_active: true,
-      })
-    }
+  if (result.stopLossPrice !== null) {
+    rows.push({
+      user_id: position.user_id,
+      position_id: position.id,
+      symbol: position.symbol,
+      type: "price_below",
+      threshold: round2(result.stopLossPrice),
+      proposal_kind: "stop_loss",
+      is_active: true,
+    })
+  }
+
+  if (rows.length > 0) {
+    await supabase.from("alerts").insert(rows)
   }
 }
 

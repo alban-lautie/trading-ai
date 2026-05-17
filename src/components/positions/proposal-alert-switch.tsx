@@ -11,6 +11,7 @@ interface ProposalAlertSwitchProps {
   kind: string
   alertType: string
   targetPrice: number
+  percent: number | null
   initialActive: boolean
 }
 
@@ -20,6 +21,7 @@ export function ProposalAlertSwitch({
   kind,
   alertType,
   targetPrice,
+  percent,
   initialActive,
 }: ProposalAlertSwitchProps) {
   const [active, setActive] = useState(initialActive)
@@ -33,6 +35,7 @@ export function ProposalAlertSwitch({
         kind,
         alertType,
         threshold: targetPrice,
+        percent,
         enabled: next,
       })
       if (result.error) {

@@ -11,6 +11,7 @@ import type {
   AiMonitoringConfig,
   ConvictionLevel,
   RecommendationAction,
+  SellTarget,
 } from "@/lib/types"
 
 /**
@@ -173,15 +174,22 @@ ligne dans le portefeuille.
 
 Règles :
 - Aligne la recommandation sur l'intention : un objectif « Gain rapide » avec un
-  horizon court justifie un objectif de vente plus proche du cours ; un objectif
-  « Long terme » laisse plus de marge à la hausse.
-- Si l'utilisateur a fixé un gain cible, l'objectif de vente vise ce gain par
-  rapport au prix d'achat moyen, sauf si le contexte le rend irréaliste.
-- L'objectif de vente est supérieur au cours actuel quand on vise une
-  plus-value ; le stop de protection est inférieur au cours actuel.
+  horizon court justifie des paliers de vente plus proches du cours ; un
+  objectif « Long terme » laisse plus de marge à la hausse.
+- Découpe la sortie en 1 à 3 paliers de vente (sell_targets), classés du prix
+  le plus proche au plus lointain ; chaque palier vend un pourcentage de la
+  position et les pourcentages somment exactement à 100.
+- Réserve plusieurs paliers aux lignes dont la valeur le justifie : pour une
+  position de faible valeur absolue, le fractionnement n'a pas d'intérêt (frais,
+  titres parfois non fractionnables) — renvoie alors un seul palier à 100 %.
+- Si l'utilisateur a fixé un gain cible, le palier le plus lointain vise au
+  moins ce gain par rapport au prix d'achat moyen, sauf si le contexte le rend
+  irréaliste.
+- Les paliers de vente sont supérieurs au cours actuel ; le stop de protection
+  est inférieur au cours actuel.
 - Appuie-toi sur l'objectif de cours moyen des analystes et sur les résistances
-  récentes pour fixer un objectif de vente réaliste ; ne t'en écarte pas
-  fortement sans raison tirée des autres données.
+  récentes pour fixer des paliers réalistes ; ne t'en écarte pas fortement sans
+  raison tirée des autres données.
 - Cale le stop de protection sous un support récent, ou à environ 1,5 à 2 fois
   l'ATR sous le cours, en resserrant pour une tolérance au risque faible.
 - Un RSI supérieur à 70 signale un titre suracheté (objectif de vente plus
@@ -195,7 +203,8 @@ Règles :
   données fondamentales ou d'analystes manquantes la réduisent.
 - Une ligne très surpondérée (> 25 % du portefeuille) justifie un allègement
   plus prudent.
-- Si le cours est indisponible, mets les deux prix à null.
+- Si le cours est indisponible, renvoie une liste sell_targets vide et le stop
+  à null.
 
 Réponds uniquement en appelant l'outil submit_recommendation. Ces
 recommandations sont une aide à la décision, pas un conseil en investissement
@@ -213,10 +222,25 @@ const RECOMMENDATION_TOOL: Anthropic.Tool = {
         description:
           "sell_now : vendre/alléger maintenant. reinforce : renforcer à la baisse. hold : conserver.",
       },
-      sell_target_price: {
-        type: ["number", "null"],
+      sell_targets: {
+        type: "array",
         description:
-          "Prix auquel réaliser une plus-value, dans la devise de la position. null si le cours est indisponible.",
+          "Paliers de vente, du prix le plus proche au plus lointain : 1 à 3 paliers dont les pourcentages somment à 100. Liste vide si le cours est indisponible.",
+        items: {
+          type: "object",
+          properties: {
+            price: {
+              type: "number",
+              description: "Prix du palier, dans la devise de la position.",
+            },
+            percent: {
+              type: "number",
+              description:
+                "Part de la position à vendre à ce palier, en pourcentage (1 à 100).",
+            },
+          },
+          required: ["price", "percent"],
+        },
       },
       stop_loss_price: {
         type: ["number", "null"],
@@ -229,7 +253,7 @@ const RECOMMENDATION_TOOL: Anthropic.Tool = {
         description: "Niveau de confiance dans la recommandation.",
       },
     },
-    required: ["action", "sell_target_price", "stop_loss_price", "conviction"],
+    required: ["action", "sell_targets", "stop_loss_price", "conviction"],
   },
 }
 
@@ -254,6 +278,8 @@ export interface PositionRecommendationInput {
   riskTolerance: string
   targetGainPercent: number | null
   currentPrice: number | null
+  /** Current market value of the position, used to judge tier splitting. */
+  positionValue: number | null
   dayChangePercent: number | null
   fiftyTwoWeekHigh: number | null
   fiftyTwoWeekLow: number | null
@@ -273,7 +299,7 @@ export interface PositionRecommendationInput {
 
 export interface PositionRecommendationResult {
   action: RecommendationAction
-  sellTargetPrice: number | null
+  sellTargets: SellTarget[]
   stopLossPrice: number | null
   conviction: ConvictionLevel
 }
@@ -319,6 +345,7 @@ Quantité : ${input.quantity}
 Prix d'achat moyen : ${input.averagePrice} ${input.currency}
 Date d'achat : ${input.openedAt}
 Cours actuel : ${num(input.currentPrice)} ${input.currency}
+Valeur actuelle de la position : ${num(input.positionValue)} ${input.currency}
 Variation du jour : ${pct(input.dayChangePercent)}
 Plus haut 52 semaines : ${num(input.fiftyTwoWeekHigh)}
 Plus bas 52 semaines : ${num(input.fiftyTwoWeekLow)}
@@ -372,6 +399,40 @@ function toPrice(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null
 }
 
+/** Parses and validates the sell tiers, capped at 3 and ordered by price. */
+function parseSellTargets(value: unknown): SellTarget[] {
+  if (!Array.isArray(value)) return []
+
+  const targets: SellTarget[] = []
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue
+    const price = (item as { price?: unknown }).price
+    const percent = (item as { percent?: unknown }).percent
+    if (
+      typeof price === "number" &&
+      Number.isFinite(price) &&
+      price > 0 &&
+      typeof percent === "number" &&
+      Number.isFinite(percent) &&
+      percent > 0
+    ) {
+      targets.push({ price, percent })
+    }
+  }
+
+  const ordered = targets.sort((a, b) => a.price - b.price).slice(0, 3)
+
+  // Rescale the tiers so their shares sum to 100% when the model drifts.
+  const total = ordered.reduce((sum, target) => sum + target.percent, 0)
+  if (total > 0 && Math.abs(total - 100) > 0.5) {
+    for (const target of ordered) {
+      target.percent = (target.percent / total) * 100
+    }
+  }
+
+  return ordered
+}
+
 /**
  * Generates a structured sell recommendation for a single position. Claude is
  * forced to answer through the `submit_recommendation` tool so the output is
@@ -415,7 +476,7 @@ export async function generatePositionRecommendation(
 
   return {
     action,
-    sellTargetPrice: toPrice(raw.sell_target_price),
+    sellTargets: parseSellTargets(raw.sell_targets),
     stopLossPrice: toPrice(raw.stop_loss_price),
     conviction,
   }
