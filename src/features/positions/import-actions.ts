@@ -4,49 +4,38 @@ import { revalidatePath } from "next/cache"
 
 import { requireUser } from "@/features/auth"
 import {
-  parsePositionsCsv,
   positionKey,
-  type CsvImportError,
+  validateImportRow,
+  type ImportRowValues,
 } from "@/features/positions/import"
+import type { PositionInsert } from "@/lib/types"
 
-type AuthedClient = Awaited<ReturnType<typeof requireUser>>["supabase"]
-
-export interface CsvPreviewRow {
-  line: number
-  symbol: string
-  quantity: number
-  averagePrice: number
-  currency: string
-}
-
-export interface CsvPreviewResult {
-  error?: string
-  /** Rows that will be created. */
-  valid?: CsvPreviewRow[]
-  /** Rows skipped: the position already exists or repeats within the file. */
-  duplicates?: CsvPreviewRow[]
-  /** Lines that could not be parsed or validated. */
-  errors?: CsvImportError[]
-}
-
-export interface CsvImportActionResult {
+export interface ImportPositionsResult {
   error?: string
   imported?: number
   skipped?: number
 }
 
-/** Loads the duplicate-detection keys of the user's existing positions. */
-async function loadExistingKeys(
-  supabase: AuthedClient,
-  userId: string
-): Promise<Set<string>> {
-  const { data } = await supabase
+/**
+ * Imports the given position rows. Each row is re-validated server-side, and
+ * rows whose position already exists or repeats earlier in the batch are
+ * skipped.
+ */
+export async function importPositions(
+  rows: ImportRowValues[]
+): Promise<ImportPositionsResult> {
+  if (rows.length === 0) {
+    return { error: "Aucune position à importer." }
+  }
+
+  const { user, supabase } = await requireUser()
+
+  const { data: existing } = await supabase
     .from("positions")
     .select("symbol, quantity, average_price")
-    .eq("user_id", userId)
-
-  return new Set(
-    (data ?? []).map((position) =>
+    .eq("user_id", user.id)
+  const existingKeys = new Set(
+    (existing ?? []).map((position) =>
       positionKey(
         position.symbol,
         Number(position.quantity),
@@ -54,66 +43,20 @@ async function loadExistingKeys(
       )
     )
   )
-}
 
-/**
- * Parses an uploaded CSV and reports what an import would do, without writing
- * anything: the rows to create, the duplicates skipped and the parse errors.
- */
-export async function previewPositionsCsv(
-  text: string
-): Promise<CsvPreviewResult> {
-  const { user, supabase } = await requireUser()
-  const { rows, errors } = parsePositionsCsv(text)
-  const existing = await loadExistingKeys(supabase, user.id)
-
-  const seen = new Set<string>()
-  const valid: CsvPreviewRow[] = []
-  const duplicates: CsvPreviewRow[] = []
-
-  for (const row of rows) {
-    const preview: CsvPreviewRow = {
-      line: row.line,
-      symbol: row.data.symbol,
-      quantity: row.data.quantity,
-      averagePrice: row.data.averagePrice,
-      currency: row.data.currency,
-    }
-    const key = positionKey(
-      row.data.symbol,
-      row.data.quantity,
-      row.data.averagePrice
-    )
-    if (existing.has(key) || seen.has(key)) {
-      duplicates.push(preview)
-    } else {
-      seen.add(key)
-      valid.push(preview)
-    }
-  }
-
-  return { valid, duplicates, errors }
-}
-
-/**
- * Imports the positions from a CSV, skipping any row whose position already
- * exists or repeats earlier in the file.
- */
-export async function importPositionsCsv(
-  text: string
-): Promise<CsvImportActionResult> {
-  const { user, supabase } = await requireUser()
-  const { rows } = parsePositionsCsv(text)
-  const existing = await loadExistingKeys(supabase, user.id)
   const today = new Date().toISOString().slice(0, 10)
-
   const seen = new Set<string>()
-  const payload = []
+  const payload: PositionInsert[] = []
   let skipped = 0
 
-  for (const { data } of rows) {
+  for (const row of rows) {
+    const { data } = validateImportRow(row)
+    if (!data) {
+      skipped += 1
+      continue
+    }
     const key = positionKey(data.symbol, data.quantity, data.averagePrice)
-    if (existing.has(key) || seen.has(key)) {
+    if (existingKeys.has(key) || seen.has(key)) {
       skipped += 1
       continue
     }

@@ -4,12 +4,21 @@ import { CsvImportDialog } from "@/components/positions/csv-import-dialog"
 import { PositionDialog } from "@/components/positions/position-dialog"
 import { PositionsTable } from "@/components/positions/positions-table"
 import { Button } from "@/components/ui/button"
+import { positionKey } from "@/features/positions/import"
 import { getPortfolio } from "@/features/positions/queries"
 
 export const metadata: Metadata = { title: "Positions" }
 
 export default async function PositionsPage() {
   const { rows, quotesError } = await getPortfolio()
+
+  const existingKeys = rows.map((row) =>
+    positionKey(
+      row.position.symbol,
+      Number(row.position.quantity),
+      Number(row.position.average_price)
+    )
+  )
 
   return (
     <div className="space-y-6">
@@ -22,6 +31,7 @@ export default async function PositionsPage() {
         </div>
         <div className="flex items-center gap-2">
           <CsvImportDialog
+            existingKeys={existingKeys}
             trigger={<Button variant="outline">Importer un CSV</Button>}
           />
           <PositionDialog trigger={<Button>Ajouter une position</Button>} />

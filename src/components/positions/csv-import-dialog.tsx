@@ -1,8 +1,10 @@
 "use client"
 
-import { useRef, useState, useTransition } from "react"
+import { useMemo, useRef, useState, useTransition } from "react"
 import { toast } from "sonner"
 
+import { CsvColumnMapping } from "@/components/positions/csv-column-mapping"
+import { CsvImportReview } from "@/components/positions/csv-import-review"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -14,28 +16,46 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { importPositions } from "@/features/positions/import-actions"
 import {
-  importPositionsCsv,
-  previewPositionsCsv,
-  type CsvPreviewResult,
-} from "@/features/positions/import-actions"
+  analyzeImportRows,
+  guessColumnMapping,
+  IMPORT_FIELDS,
+  type ColumnMapping,
+  type ImportRowValues,
+} from "@/features/positions/import"
+import { parseCsv } from "@/lib/csv"
+
+interface EditableRow {
+  id: string
+  values: ImportRowValues
+}
 
 interface CsvImportDialogProps {
   trigger: React.ReactNode
+  /** Duplicate-detection keys of the user's existing positions. */
+  existingKeys: string[]
 }
 
-/** Dialog to import positions from a CSV file, with a preview before import. */
-export function CsvImportDialog({ trigger }: CsvImportDialogProps) {
+/** Two-step dialog to import positions from a broker CSV export. */
+export function CsvImportDialog({ trigger, existingKeys }: CsvImportDialogProps) {
   const [open, setOpen] = useState(false)
-  const [fileText, setFileText] = useState<string | null>(null)
-  const [preview, setPreview] = useState<CsvPreviewResult | null>(null)
-  const [isPreviewing, startPreview] = useTransition()
+  const [step, setStep] = useState<"map" | "review">("map")
+  const [headers, setHeaders] = useState<string[]>([])
+  const [dataRows, setDataRows] = useState<string[][]>([])
+  const [mapping, setMapping] = useState<ColumnMapping | null>(null)
+  const [rows, setRows] = useState<EditableRow[]>([])
   const [isImporting, startImport] = useTransition()
   const inputRef = useRef<HTMLInputElement>(null)
 
+  const keySet = useMemo(() => new Set(existingKeys), [existingKeys])
+
   function reset() {
-    setFileText(null)
-    setPreview(null)
+    setStep("map")
+    setHeaders([])
+    setDataRows([])
+    setMapping(null)
+    setRows([])
     if (inputRef.current) inputRef.current.value = ""
   }
 
@@ -47,18 +67,51 @@ export function CsvImportDialog({ trigger }: CsvImportDialogProps) {
   async function handleFile(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0]
     if (!file) return
-    const text = await file.text()
-    setFileText(text)
-    setPreview(null)
-    startPreview(async () => {
-      setPreview(await previewPositionsCsv(text))
+
+    const grid = parseCsv(await file.text())
+    if (grid.length < 2) {
+      toast.error("Le fichier doit contenir un en-tête et au moins une ligne.")
+      reset()
+      return
+    }
+
+    const fileHeaders = grid[0].map((cell) => cell.trim())
+    const body = grid
+      .slice(1)
+      .filter((cells) => cells.some((cell) => cell.trim() !== ""))
+    setHeaders(fileHeaders)
+    setDataRows(body)
+    setMapping(guessColumnMapping(fileHeaders))
+    setStep("map")
+  }
+
+  function handleContinue() {
+    if (!mapping) return
+    const built: EditableRow[] = dataRows.map((cells) => {
+      const values = {} as ImportRowValues
+      for (const def of IMPORT_FIELDS) {
+        const index = mapping[def.field]
+        values[def.field] =
+          index === null ? "" : (cells[index] ?? "").trim()
+      }
+      return { id: crypto.randomUUID(), values }
     })
+    setRows(built)
+    setStep("review")
   }
 
   function handleImport() {
-    if (!fileText) return
+    const importable = analyzeImportRows(rows, keySet)
+      .filter((row) => !row.error && !row.isDuplicate)
+      .map((row) => row.values)
+
+    if (importable.length === 0) {
+      toast.error("Aucune position valide à importer.")
+      return
+    }
+
     startImport(async () => {
-      const result = await importPositionsCsv(fileText)
+      const result = await importPositions(importable)
       if (result.error) {
         toast.error(result.error)
         return
@@ -71,97 +124,68 @@ export function CsvImportDialog({ trigger }: CsvImportDialogProps) {
     })
   }
 
-  const validRows = preview?.valid ?? []
-  const duplicates = preview?.duplicates ?? []
-  const errors = preview?.errors ?? []
+  const hasFile = headers.length > 0
+  const requiredMapped =
+    mapping !== null &&
+    IMPORT_FIELDS.filter((def) => def.required).every(
+      (def) => mapping[def.field] !== null
+    )
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{trigger}</DialogTrigger>
-      <DialogContent>
+      <DialogContent className={step === "review" ? "sm:max-w-4xl" : undefined}>
         <DialogHeader>
           <DialogTitle>Importer des positions</DialogTitle>
           <DialogDescription>
-            Fichier CSV avec les colonnes <code>symbol</code>,{" "}
-            <code>quantity</code>, <code>average_price</code> (obligatoires),{" "}
-            <code>currency</code>, <code>name</code>, <code>opened_at</code>{" "}
-            (optionnelles).
+            {step === "map"
+              ? "Choisissez le fichier CSV, puis associez ses colonnes."
+              : "Corrigez les lignes en erreur ou supprimez-les avant l'import."}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-4">
-          <Input
-            ref={inputRef}
-            type="file"
-            accept=".csv,text/csv"
-            onChange={handleFile}
+        {step === "map" ? (
+          <div className="grid gap-4">
+            <Input
+              ref={inputRef}
+              type="file"
+              accept=".csv,text/csv"
+              onChange={handleFile}
+            />
+            {hasFile && mapping ? (
+              <CsvColumnMapping
+                headers={headers}
+                mapping={mapping}
+                onChange={setMapping}
+              />
+            ) : null}
+          </div>
+        ) : (
+          <CsvImportReview
+            rows={rows}
+            existingKeys={keySet}
+            onChange={setRows}
           />
-
-          {isPreviewing ? (
-            <p className="text-muted-foreground text-sm">
-              Analyse du fichier…
-            </p>
-          ) : null}
-
-          {preview ? (
-            <div className="grid gap-3 text-sm">
-              <div className="flex flex-wrap gap-x-4 gap-y-1">
-                <span className="font-medium text-emerald-600">
-                  {validRows.length} à importer
-                </span>
-                {duplicates.length > 0 ? (
-                  <span className="text-muted-foreground">
-                    {duplicates.length} doublon(s) ignoré(s)
-                  </span>
-                ) : null}
-                {errors.length > 0 ? (
-                  <span className="text-destructive">
-                    {errors.length} ligne(s) en erreur
-                  </span>
-                ) : null}
-              </div>
-
-              {validRows.length > 0 ? (
-                <div className="max-h-40 overflow-y-auto rounded-md border">
-                  {validRows.map((row) => (
-                    <div
-                      key={row.line}
-                      className="flex justify-between gap-2 border-b px-3 py-1.5 text-xs last:border-b-0"
-                    >
-                      <span className="font-medium">{row.symbol}</span>
-                      <span className="text-muted-foreground tabular-nums">
-                        {row.quantity} × {row.averagePrice} {row.currency}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-
-              {errors.length > 0 ? (
-                <ul className="border-destructive/30 bg-destructive/5 max-h-32 space-y-0.5 overflow-y-auto rounded-md border p-2 text-xs">
-                  {errors.map((error) => (
-                    <li
-                      key={`${error.line}-${error.message}`}
-                      className="text-destructive"
-                    >
-                      Ligne {error.line} : {error.message}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
+        )}
 
         <DialogFooter>
-          <Button
-            onClick={handleImport}
-            disabled={isImporting || isPreviewing || validRows.length === 0}
-          >
-            {isImporting
-              ? "Import en cours…"
-              : `Importer ${validRows.length} position(s)`}
-          </Button>
+          {step === "map" ? (
+            <Button
+              onClick={handleContinue}
+              disabled={!hasFile || !requiredMapped}
+            >
+              Continuer
+            </Button>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => setStep("map")}>
+                Retour
+              </Button>
+              <Button onClick={handleImport} disabled={isImporting}>
+                {isImporting ? "Import en cours…" : "Importer"}
+              </Button>
+            </>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
