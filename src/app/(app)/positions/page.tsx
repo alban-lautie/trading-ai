@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 
+import { CsvImportDialog } from "@/components/positions/csv-import-dialog"
 import { PositionDialog } from "@/components/positions/position-dialog"
 import { PositionsTable } from "@/components/positions/positions-table"
 import { Button } from "@/components/ui/button"
@@ -19,7 +20,12 @@ export default async function PositionsPage() {
             Gérez les actions de votre portefeuille.
           </p>
         </div>
-        <PositionDialog trigger={<Button>Ajouter une position</Button>} />
+        <div className="flex items-center gap-2">
+          <CsvImportDialog
+            trigger={<Button variant="outline">Importer un CSV</Button>}
+          />
+          <PositionDialog trigger={<Button>Ajouter une position</Button>} />
+        </div>
       </header>
 
       {quotesError ? (
