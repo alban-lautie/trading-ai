@@ -6,6 +6,7 @@ import { PositionRowActions } from "@/components/positions/position-row-actions"
 import { TableCell, TableRow } from "@/components/ui/table"
 import {
   formatCurrency,
+  formatGenerationDate,
   formatPercent,
   formatSignedCurrency,
   pnlColorClass,
@@ -71,6 +72,11 @@ export function PositionTableRow({ row }: PositionTableRowProps) {
         ) : (
           <span className="text-muted-foreground">—</span>
         )}
+      </TableCell>
+      <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+        {row.recommendationGeneratedAt
+          ? formatGenerationDate(row.recommendationGeneratedAt)
+          : "—"}
       </TableCell>
       <TableCell onClick={(event) => event.stopPropagation()}>
         <PositionRowActions position={position} />

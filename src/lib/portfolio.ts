@@ -17,6 +17,8 @@ export interface PositionWithMetrics {
   unrealizedPnl: number | null
   /** unrealizedPnl / costBasis */
   unrealizedPnlPercent: number | null
+  /** ISO timestamp of the last AI recommendation, when one exists. */
+  recommendationGeneratedAt?: string | null
 }
 
 /** Aggregate figures for the whole portfolio. */

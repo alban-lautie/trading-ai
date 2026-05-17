@@ -34,6 +34,7 @@ export function PositionsTable({ rows }: PositionsTableProps) {
             <TableHead className="text-right">Valeur</TableHead>
             <TableHead className="text-right">+/- value latente</TableHead>
             <TableHead className="text-right">Perf.</TableHead>
+            <TableHead>Dernière analyse</TableHead>
             <TableHead className="w-24" />
           </TableRow>
         </TableHeader>

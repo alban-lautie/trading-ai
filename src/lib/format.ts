@@ -27,6 +27,21 @@ export function formatSignedCurrency(value: number, currency = "USD"): string {
   }).format(value)
 }
 
+const generationDateFormatter = new Intl.DateTimeFormat("fr-FR", {
+  day: "numeric",
+  month: "long",
+  hour: "2-digit",
+  minute: "2-digit",
+})
+
+/** Formats a timestamp as a French short date, e.g. "24 mai à 09h45". */
+export function formatGenerationDate(iso: string): string {
+  const parts = generationDateFormatter.formatToParts(new Date(iso))
+  const part = (type: string) =>
+    parts.find((entry) => entry.type === type)?.value ?? ""
+  return `${part("day")} ${part("month")} à ${part("hour")}h${part("minute")}`
+}
+
 /** Returns a Tailwind text color class for a gain / loss / flat value. */
 export function pnlColorClass(value: number | null | undefined): string {
   if (value === null || value === undefined || value === 0) {

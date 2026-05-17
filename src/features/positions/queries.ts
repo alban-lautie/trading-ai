@@ -1,7 +1,10 @@
 import "server-only"
 
 import { requireUser } from "@/features/auth"
-import { getRecommendation } from "@/features/positions/recommendations"
+import {
+  getRecommendation,
+  getRecommendations,
+} from "@/features/positions/recommendations"
 import { getQuotesWithFallback } from "@/features/quotes/queries"
 import {
   getPriceHistory,
@@ -39,16 +42,22 @@ export async function getPortfolio(): Promise<PortfolioData> {
   }
 
   const positions: Position[] = data ?? []
-  const { quotes, error: quotesError } = await getQuotesWithFallback(
-    positions.map((position) => position.symbol)
-  )
+  const [{ quotes, error: quotesError }, recommendations] = await Promise.all([
+    getQuotesWithFallback(positions.map((position) => position.symbol)),
+    getRecommendations(
+      supabase,
+      positions.map((position) => position.id)
+    ),
+  ])
 
-  const rows = positions.map((position) =>
-    computePositionMetrics(
+  const rows = positions.map((position) => ({
+    ...computePositionMetrics(
       position,
       quotes.get(position.symbol.toUpperCase()) ?? null
-    )
-  )
+    ),
+    recommendationGeneratedAt:
+      recommendations.get(position.id)?.generated_at ?? null,
+  }))
 
   return {
     rows,
