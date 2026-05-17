@@ -99,9 +99,9 @@ export function PositionProposals({
           />
         </div>
         <CardDescription>
-          Activez le switch pour être alerté sur Telegram lorsque le cours
-          atteint le niveau proposé. Ce n&apos;est pas un conseil en
-          investissement.
+          Les alertes Telegram sont posées automatiquement sur les niveaux
+          recommandés ; vous pouvez les désactiver ici. Ce n&apos;est pas un
+          conseil en investissement.
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-3">

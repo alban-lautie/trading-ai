@@ -39,3 +39,39 @@ export async function generateRecommendationNow(
   revalidatePath(`/positions/${positionId}`)
   return { success: true }
 }
+
+/**
+ * Generates a fresh AI recommendation for every position of the current
+ * user's portfolio. Succeeds as long as at least one recommendation could
+ * be generated.
+ */
+export async function generateAllRecommendations(): Promise<RecommendationActionResult> {
+  const { supabase } = await requireUser()
+  const portfolio = await getPortfolio()
+
+  if (portfolio.rows.length === 0) {
+    return { error: "Aucune position à analyser." }
+  }
+
+  const context = {
+    portfolioTotalValue: portfolio.summary.marketValue,
+    portfolioPnlPercent: portfolio.summary.unrealizedPnlPercent,
+    positionCount: portfolio.rows.length,
+  }
+
+  let generated = 0
+  for (const row of portfolio.rows) {
+    const result = await runPositionRecommendation(supabase, row, context)
+    if (result) {
+      generated += 1
+    }
+  }
+
+  if (generated === 0) {
+    return { error: "La génération des recommandations a échoué." }
+  }
+
+  revalidatePath("/dashboard")
+  revalidatePath("/positions")
+  return { success: true }
+}

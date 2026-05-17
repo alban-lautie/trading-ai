@@ -12,7 +12,7 @@ import type { Database } from "@/lib/database.types"
 import { getPriceHistory, getStockNews } from "@/lib/market-data"
 import type { PriceHistory } from "@/lib/market-data"
 import type { PositionWithMetrics } from "@/lib/portfolio"
-import type { PositionRecommendation } from "@/lib/types"
+import type { AlertType, Position, PositionRecommendation } from "@/lib/types"
 
 /** Number of recent headlines passed to the recommendation prompt. */
 const NEWS_LIMIT = 6
@@ -132,37 +132,51 @@ export async function runPositionRecommendation(
     return null
   }
 
-  await syncProposalAlerts(supabase, position.id, result)
+  await armProposalAlerts(supabase, position, result)
   return data
 }
 
 /**
- * Keeps the alerts armed from this position's proposals in sync with the
- * latest recommendation: an active, not-yet-triggered take-profit or
- * stop-loss alert tracks the new price level so it never watches a stale
- * target. Disarmed and triggered alerts are left untouched.
+ * Replaces the alerts armed from this position's proposals so they always
+ * match the latest recommendation: every previous take-profit / stop-loss
+ * proposal alert is removed and a fresh active alert is created from the new
+ * price levels. Alerts created manually (without a proposal kind) are left
+ * untouched.
  */
-async function syncProposalAlerts(
+async function armProposalAlerts(
   supabase: Client,
-  positionId: string,
+  position: Position,
   result: { sellTargetPrice: number | null; stopLossPrice: number | null }
 ): Promise<void> {
-  const updates: Array<{ kind: string; price: number }> = []
-  if (result.sellTargetPrice !== null) {
-    updates.push({ kind: "take_profit", price: result.sellTargetPrice })
-  }
-  if (result.stopLossPrice !== null) {
-    updates.push({ kind: "stop_loss", price: result.stopLossPrice })
-  }
+  const specs: Array<{ kind: string; type: AlertType; price: number | null }> =
+    [
+      {
+        kind: "take_profit",
+        type: "price_above",
+        price: result.sellTargetPrice,
+      },
+      { kind: "stop_loss", type: "price_below", price: result.stopLossPrice },
+    ]
 
-  for (const { kind, price } of updates) {
+  for (const { kind, type, price } of specs) {
+    // Drop the alert previously armed from this proposal, whatever its state.
     await supabase
       .from("alerts")
-      .update({ threshold: Math.round(price * 100) / 100 })
-      .eq("position_id", positionId)
+      .delete()
+      .eq("position_id", position.id)
       .eq("proposal_kind", kind)
-      .eq("is_active", true)
-      .is("triggered_at", null)
+
+    if (price !== null) {
+      await supabase.from("alerts").insert({
+        user_id: position.user_id,
+        position_id: position.id,
+        symbol: position.symbol,
+        type,
+        threshold: Math.round(price * 100) / 100,
+        proposal_kind: kind,
+        is_active: true,
+      })
+    }
   }
 }
 
