@@ -34,12 +34,22 @@ const generationDateFormatter = new Intl.DateTimeFormat("fr-FR", {
   minute: "2-digit",
 })
 
-/** Formats a timestamp as a French short date, e.g. "24 mai à 09h45". */
-export function formatGenerationDate(iso: string): string {
-  const parts = generationDateFormatter.formatToParts(new Date(iso))
+/** Formats a date as a French short date, e.g. "24 mai à 09h45". */
+function formatFrenchDateTime(date: Date): string {
+  const parts = generationDateFormatter.formatToParts(date)
   const part = (type: string) =>
     parts.find((entry) => entry.type === type)?.value ?? ""
   return `${part("day")} ${part("month")} à ${part("hour")}h${part("minute")}`
+}
+
+/** Formats an ISO timestamp as a French short date, e.g. "24 mai à 09h45". */
+export function formatGenerationDate(iso: string): string {
+  return formatFrenchDateTime(new Date(iso))
+}
+
+/** Formats an epoch (ms) quote timestamp as a French short date. */
+export function formatQuoteTime(epochMs: number): string {
+  return formatFrenchDateTime(new Date(epochMs))
 }
 
 /** Returns a Tailwind text color class for a gain / loss / flat value. */

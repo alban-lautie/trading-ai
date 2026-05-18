@@ -8,6 +8,7 @@ import {
   formatCurrency,
   formatGenerationDate,
   formatPercent,
+  formatQuoteTime,
   formatSignedCurrency,
   pnlColorClass,
 } from "@/lib/format"
@@ -72,6 +73,9 @@ export function PositionTableRow({ row }: PositionTableRowProps) {
         ) : (
           <span className="text-muted-foreground">—</span>
         )}
+      </TableCell>
+      <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+        {quote ? formatQuoteTime(quote.timestamp) : "—"}
       </TableCell>
       <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
         {row.recommendationGeneratedAt
