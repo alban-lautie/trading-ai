@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react"
 import { AlertsList } from "@/components/alerts/alerts-list"
 import { PositionBenchmarks } from "@/components/positions/position-benchmarks"
 import { PositionDetailActions } from "@/components/positions/position-detail-actions"
+import { PositionEntryCard } from "@/components/positions/position-entry-card"
 import { PositionInfoCard } from "@/components/positions/position-info-card"
 import { PositionInsight } from "@/components/positions/position-insight"
 import { PositionMetricCards } from "@/components/positions/position-metric-cards"
@@ -62,6 +63,8 @@ export default async function PositionDetailPage({
       </header>
 
       <PositionMetricCards metrics={metrics} />
+
+      <PositionEntryCard metrics={metrics} />
 
       <PositionProposals
         metrics={metrics}
