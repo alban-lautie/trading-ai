@@ -11,11 +11,8 @@ export function LandingHeader() {
           Trading<span className="text-primary">AI</span>
         </Link>
         <nav className="flex items-center gap-2">
-          <Button asChild variant="ghost">
-            <Link href="/login">Se connecter</Link>
-          </Button>
           <Button asChild>
-            <Link href="/login?mode=signup">Commencer</Link>
+            <Link href="/login">Se connecter</Link>
           </Button>
         </nav>
       </div>

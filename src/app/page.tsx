@@ -69,9 +69,6 @@ export default function LandingPage() {
           </p>
           <div className="mt-8 flex justify-center gap-3">
             <Button asChild size="lg">
-              <Link href="/login?mode=signup">Créer un compte gratuit</Link>
-            </Button>
-            <Button asChild size="lg" variant="outline">
               <Link href="/login">Se connecter</Link>
             </Button>
           </div>

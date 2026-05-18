@@ -1,8 +1,8 @@
 "use client"
 
-import { useActionState, useState } from "react"
+import { useActionState } from "react"
 
-import { signIn, signUp, type AuthState } from "@/app/login/actions"
+import { signIn, type AuthState } from "@/app/login/actions"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -15,32 +15,18 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
-type Mode = "signin" | "signup"
-
-interface LoginFormProps {
-  defaultMode: Mode
-}
-
-/** Email / password sign-in and sign-up form. */
-export function LoginForm({ defaultMode }: LoginFormProps) {
-  const [mode, setMode] = useState<Mode>(defaultMode)
-  const action = mode === "signup" ? signUp : signIn
+/** Email / password sign-in form. Sign-up is disabled. */
+export function LoginForm() {
   const [state, formAction, pending] = useActionState<AuthState, FormData>(
-    action,
+    signIn,
     {}
   )
-
-  const isSignup = mode === "signup"
 
   return (
     <Card className="w-full max-w-sm">
       <CardHeader>
-        <CardTitle>{isSignup ? "Créer un compte" : "Se connecter"}</CardTitle>
-        <CardDescription>
-          {isSignup
-            ? "Commencez à suivre votre portefeuille."
-            : "Accédez à votre portefeuille."}
-        </CardDescription>
+        <CardTitle>Se connecter</CardTitle>
+        <CardDescription>Accédez à votre portefeuille.</CardDescription>
       </CardHeader>
       <form action={formAction}>
         <CardContent className="grid gap-4">
@@ -60,7 +46,7 @@ export function LoginForm({ defaultMode }: LoginFormProps) {
               id="password"
               name="password"
               type="password"
-              autoComplete={isSignup ? "new-password" : "current-password"}
+              autoComplete="current-password"
               required
             />
           </div>
@@ -70,23 +56,10 @@ export function LoginForm({ defaultMode }: LoginFormProps) {
             </p>
           ) : null}
         </CardContent>
-        <CardFooter className="mt-4 flex-col gap-3">
+        <CardFooter className="mt-4">
           <Button type="submit" className="w-full" disabled={pending}>
-            {pending
-              ? "Veuillez patienter…"
-              : isSignup
-                ? "Créer le compte"
-                : "Se connecter"}
+            {pending ? "Veuillez patienter…" : "Se connecter"}
           </Button>
-          <button
-            type="button"
-            className="text-muted-foreground text-sm hover:underline"
-            onClick={() => setMode(isSignup ? "signin" : "signup")}
-          >
-            {isSignup
-              ? "J'ai déjà un compte"
-              : "Je n'ai pas encore de compte"}
-          </button>
         </CardFooter>
       </form>
     </Card>
