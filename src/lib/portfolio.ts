@@ -1,4 +1,5 @@
 import type { Quote } from "@/lib/market-data/types"
+import { isCurrencyMarketOpen } from "@/lib/market-hours"
 import type { Position } from "@/lib/types"
 
 /**
@@ -17,6 +18,8 @@ export interface PositionWithMetrics {
   unrealizedPnl: number | null
   /** unrealizedPnl / costBasis */
   unrealizedPnlPercent: number | null
+  /** Whether the market the position trades on is currently open. */
+  marketOpen: boolean
   /** ISO timestamp of the last AI recommendation, when one exists. */
   recommendationGeneratedAt?: string | null
 }
@@ -39,6 +42,7 @@ export function computePositionMetrics(
   const quantity = Number(position.quantity)
   const averagePrice = Number(position.average_price)
   const costBasis = quantity * averagePrice
+  const marketOpen = isCurrencyMarketOpen(position.currency)
 
   if (!quote) {
     return {
@@ -48,6 +52,7 @@ export function computePositionMetrics(
       marketValue: null,
       unrealizedPnl: null,
       unrealizedPnlPercent: null,
+      marketOpen,
     }
   }
 
@@ -62,6 +67,7 @@ export function computePositionMetrics(
     marketValue,
     unrealizedPnl,
     unrealizedPnlPercent,
+    marketOpen,
   }
 }
 

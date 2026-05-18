@@ -9,6 +9,7 @@ export type SortKey =
   | "marketValue"
   | "unrealizedPnl"
   | "unrealizedPnlPercent"
+  | "marketOpen"
   | "quoteTime"
   | "recommendation"
 
@@ -25,6 +26,7 @@ const valueGetters: Record<SortKey, (row: PositionWithMetrics) => SortValue> = {
   marketValue: (row) => row.marketValue,
   unrealizedPnl: (row) => row.unrealizedPnl,
   unrealizedPnlPercent: (row) => row.unrealizedPnlPercent,
+  marketOpen: (row) => (row.marketOpen ? 1 : 0),
   quoteTime: (row) => row.quote?.timestamp ?? null,
   recommendation: (row) =>
     row.recommendationGeneratedAt

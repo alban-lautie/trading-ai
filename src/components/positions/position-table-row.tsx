@@ -13,6 +13,7 @@ import {
   pnlColorClass,
 } from "@/lib/format"
 import type { PositionWithMetrics } from "@/lib/portfolio"
+import { cn } from "@/lib/utils"
 
 interface PositionTableRowProps {
   row: PositionWithMetrics
@@ -73,6 +74,23 @@ export function PositionTableRow({ row }: PositionTableRowProps) {
         ) : (
           <span className="text-muted-foreground">—</span>
         )}
+      </TableCell>
+      <TableCell>
+        <span className="inline-flex items-center gap-1.5 text-xs whitespace-nowrap">
+          <span
+            className={cn(
+              "size-1.5 rounded-full",
+              row.marketOpen ? "bg-emerald-500" : "bg-muted-foreground/40"
+            )}
+          />
+          <span
+            className={
+              row.marketOpen ? "text-foreground" : "text-muted-foreground"
+            }
+          >
+            {row.marketOpen ? "Ouvert" : "Fermé"}
+          </span>
+        </span>
       </TableCell>
       <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
         {quote ? formatQuoteTime(quote.timestamp) : "—"}

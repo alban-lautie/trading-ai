@@ -102,6 +102,9 @@ export function PositionsTable({ rows }: PositionsTableProps) {
             >
               Perf.
             </SortableTableHead>
+            <SortableTableHead sortKey="marketOpen" {...headProps}>
+              Marché
+            </SortableTableHead>
             <SortableTableHead sortKey="quoteTime" {...headProps}>
               Dernière actu du cours
             </SortableTableHead>
