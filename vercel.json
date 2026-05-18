@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    { "path": "/api/cron/refresh-quotes", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/evaluate-alerts", "schedule": "*/5 * * * *" },
+    { "path": "/api/cron/recompute-recommendations/eu", "schedule": "0 8 * * 1-5" },
+    { "path": "/api/cron/recompute-recommendations/us", "schedule": "30 14 * * 1-5" },
+    { "path": "/api/cron/daily-summary", "schedule": "45 14 * * 1-5" }
+  ]
+}

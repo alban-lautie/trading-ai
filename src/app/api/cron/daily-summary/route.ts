@@ -4,12 +4,12 @@ import { runDailySummaries } from "@/features/dashboard/cron"
 import { checkCronAuth } from "@/lib/cron-auth"
 
 /**
- * POST /api/cron/daily-summary
+ * GET /api/cron/daily-summary
  *
  * Generates the daily AI summary for every user. Invoked on a schedule by
- * pg_cron (weekdays, after the US market opens) and protected by CRON_SECRET.
+ * Vercel Cron (weekdays, after the US market opens) and protected by CRON_SECRET.
  */
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   const denied = checkCronAuth(request)
   if (denied) return denied
 

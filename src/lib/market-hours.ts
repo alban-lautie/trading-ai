@@ -94,19 +94,6 @@ export function isMarketOpen(
 }
 
 /**
- * Whether the market opened within the last `windowMinutes`: open now, but
- * closed `windowMinutes` earlier. Comparing two instants keeps this DST-safe.
- */
-export function justOpened(
-  region: MarketRegion,
-  windowMinutes: number,
-  at: Date = new Date()
-): boolean {
-  const earlier = new Date(at.getTime() - windowMinutes * 60_000)
-  return isMarketOpen(region, at) && !isMarketOpen(region, earlier)
-}
-
-/**
  * Whether a symbol expressed in the given currency is currently tradable.
  * Unknown markets are always considered open so a symbol is never silently
  * dropped from the refresh.

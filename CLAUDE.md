@@ -28,7 +28,7 @@ Application web de suivi de portefeuille d'actions. L'utilisateur saisit ses pos
 ### Alertes
 - L'utilisateur définit des alertes par position : seuil de cours, variation
   du jour, ou plus/moins-value latente par rapport au prix d'achat.
-- Un **cron** (`pg_cron`, toutes les 5 min) appelle `POST /api/cron/evaluate-alerts`
+- Un **cron** (Vercel Cron, toutes les 5 min) appelle `GET /api/cron/evaluate-alerts`
   qui évalue chaque alerte active contre le dernier cours stocké.
 - Déclenchement → notification **Telegram** (l'utilisateur connecte son compte
   Telegram via un bot dédié, configuré avec `TELEGRAM_BOT_TOKEN`). Une alerte
@@ -65,12 +65,14 @@ Application web de suivi de portefeuille d'actions. L'utilisateur saisit ses pos
 ## Cours de bourse (Yahoo Finance)
 
 - L'API Yahoo Finance est **non officielle** : tous les appels sont isolés dans `src/lib/market-data/` pour pouvoir changer de fournisseur sans impacter le reste du code.
-- Les cours sont **rafraîchis par un cron** (`pg_cron`, toutes les 5 min) qui
-  appelle `POST /api/cron/refresh-quotes` et stocke les cours dans la table
+- Les cours sont **rafraîchis par un cron** (Vercel Cron, toutes les 5 min) qui
+  appelle `GET /api/cron/refresh-quotes` et stocke les cours dans la table
   `quotes`. Le dashboard lit cette table ; un symbole absent (position juste
   ajoutée) est récupéré en direct en complément.
-- L'endpoint cron est protégé par `CRON_SECRET` ; le même secret est stocké
-  côté base dans `private.cron_config`.
+- Les tâches planifiées sont déclarées dans `vercel.json` (clé `crons`) et
+  invoquées par **Vercel Cron**. L'endpoint cron est protégé par `CRON_SECRET` ;
+  Vercel attache automatiquement l'en-tête `Authorization: Bearer ${CRON_SECRET}`
+  lorsque la variable d'environnement est définie sur le projet.
 - Gestion d'erreur explicite : si le cours est indisponible, l'afficher clairement plutôt que d'afficher une valeur fausse.
 
 ## Sécurité

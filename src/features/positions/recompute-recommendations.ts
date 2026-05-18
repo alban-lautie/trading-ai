@@ -6,23 +6,14 @@ import {
   runPositionRecommendation,
 } from "@/features/positions/recommendations"
 import { getStoredQuotesWith } from "@/features/quotes/queries"
-import {
-  justOpened,
-  regionForCurrency,
-  type MarketRegion,
-} from "@/lib/market-hours"
+import { regionForCurrency, type MarketRegion } from "@/lib/market-hours"
 import { computePositionMetrics, summarizePortfolio } from "@/lib/portfolio"
 import { createAdminClient } from "@/lib/supabase/admin"
 import type { Position } from "@/lib/types"
 
-/** Markets whose opening triggers a recompute. */
-const REGIONS: readonly MarketRegion[] = ["US", "EU"]
-/** Window matching the 5-minute cron cadence used to detect the open. */
-const OPEN_WINDOW_MINUTES = 5
-
-export interface MarketOpenResult {
-  /** Regions detected as having just opened. */
-  regions: MarketRegion[]
+export interface RecomputeResult {
+  /** Market region whose recommendations were recomputed. */
+  region: MarketRegion
   /** Recommendations regenerated. */
   recommendations: number
   /** Daily summaries refreshed. */
@@ -30,20 +21,14 @@ export interface MarketOpenResult {
 }
 
 /**
- * Recomputes AI recommendations for every position whose market has just
- * opened, then refreshes the affected users' daily summary so it reflects the
- * new sell targets. Runs with the service role; invoked by the 5-minute cron,
- * and a no-op outside the opening window of the US and EU markets.
+ * Recomputes the AI sell recommendations for every position trading in the
+ * given region, then refreshes the affected users' daily summary so it
+ * reflects the new sell targets. Runs with the service role; invoked once per
+ * weekday by the cron scheduled at that market's open.
  */
-export async function recomputeAtMarketOpen(): Promise<MarketOpenResult> {
-  const now = new Date()
-  const openedRegions = REGIONS.filter((region) =>
-    justOpened(region, OPEN_WINDOW_MINUTES, now)
-  )
-  if (openedRegions.length === 0) {
-    return { regions: [], recommendations: 0, summaries: 0 }
-  }
-
+export async function recomputeRegionRecommendations(
+  region: MarketRegion
+): Promise<RecomputeResult> {
   const supabase = createAdminClient()
   const { data, error } = await supabase.from("positions").select("*")
   if (error) {
@@ -52,7 +37,7 @@ export async function recomputeAtMarketOpen(): Promise<MarketOpenResult> {
 
   const positions: Position[] = data ?? []
   if (positions.length === 0) {
-    return { regions: [...openedRegions], recommendations: 0, summaries: 0 }
+    return { region, recommendations: 0, summaries: 0 }
   }
 
   const symbols = [...new Set(positions.map((p) => p.symbol.toUpperCase()))]
@@ -65,7 +50,6 @@ export async function recomputeAtMarketOpen(): Promise<MarketOpenResult> {
     byUser.set(position.user_id, list)
   }
 
-  const openedSet = new Set<MarketRegion>(openedRegions)
   let recommendations = 0
   let summaries = 0
 
@@ -83,12 +67,11 @@ export async function recomputeAtMarketOpen(): Promise<MarketOpenResult> {
       positionCount: rows.length,
     }
 
-    // Only positions whose own market just opened are recomputed; the rest
+    // Only positions trading in the given region are recomputed; the rest
     // keep their last recommendation.
-    const toRecompute = rows.filter((row) => {
-      const region = regionForCurrency(row.position.currency)
-      return region !== null && openedSet.has(region)
-    })
+    const toRecompute = rows.filter(
+      (row) => regionForCurrency(row.position.currency) === region
+    )
     if (toRecompute.length === 0) {
       continue
     }
@@ -109,5 +92,5 @@ export async function recomputeAtMarketOpen(): Promise<MarketOpenResult> {
     }
   }
 
-  return { regions: [...openedRegions], recommendations, summaries }
+  return { region, recommendations, summaries }
 }
