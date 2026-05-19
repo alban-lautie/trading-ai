@@ -30,7 +30,24 @@ export async function signIn(
   const { error } = await supabase.auth.signInWithPassword({ email, password })
 
   if (error) {
-    return { error: "Identifiants invalides." }
+    // Log the full error server-side (Vercel logs) so genuine failures can be
+    // diagnosed instead of being hidden behind a generic message.
+    console.error("[auth] signIn failed", {
+      code: error.code,
+      status: error.status,
+      message: error.message,
+    })
+
+    if (error.code === "email_not_confirmed") {
+      return { error: "Adresse email non confirmée." }
+    }
+    if (error.status === 429) {
+      return { error: "Trop de tentatives. Réessayez dans quelques minutes." }
+    }
+    if (error.code === "invalid_credentials") {
+      return { error: "Identifiants invalides." }
+    }
+    return { error: `Connexion impossible (${error.code ?? error.status}).` }
   }
 
   revalidatePath("/", "layout")
