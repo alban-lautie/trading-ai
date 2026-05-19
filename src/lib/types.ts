@@ -27,6 +27,11 @@ export type Alert = Tables["alerts"]["Row"]
 export type AlertInsert = Tables["alerts"]["Insert"]
 export type AlertType = Enums["alert_type"]
 
+export type Watchlist = Tables["watchlist"]["Row"]
+export type WatchlistInsert = Tables["watchlist"]["Insert"]
+export type WatchlistUpdate = Tables["watchlist"]["Update"]
+export type EntryAction = Enums["entry_action"]
+
 export type AiMonitoringConfig = Tables["ai_monitoring_config"]["Row"]
 export type AiMonitoringConfigInsert = Tables["ai_monitoring_config"]["Insert"]
 export type AiReport = Tables["ai_reports"]["Row"]

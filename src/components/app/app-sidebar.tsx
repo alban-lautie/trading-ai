@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   Bell,
+  Eye,
   LayoutDashboard,
   LineChart,
   Sparkles,
@@ -28,6 +29,7 @@ import {
 const navItems = [
   { href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
   { href: "/positions", label: "Positions", icon: Wallet },
+  { href: "/watchlist", label: "Watchlist", icon: Eye },
   { href: "/alerts", label: "Alertes", icon: Bell },
   { href: "/ai", label: "Suivi IA", icon: Sparkles },
 ]

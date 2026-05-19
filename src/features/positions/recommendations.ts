@@ -44,7 +44,7 @@ export interface RecommendationContext {
  * Annualized volatility (in percent) derived from the close prices of the
  * price history. Returns `null` when there is not enough data.
  */
-function computeVolatility(history: PriceHistory | null): number | null {
+export function computeVolatility(history: PriceHistory | null): number | null {
   const closes = history?.points.map((point) => point.close) ?? []
   if (closes.length < 10) {
     return null

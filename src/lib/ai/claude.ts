@@ -10,6 +10,7 @@ import type { PortfolioSummary, PositionWithMetrics } from "@/lib/portfolio"
 import type {
   AiMonitoringConfig,
   ConvictionLevel,
+  EntryAction,
   RecommendationAction,
   SellTarget,
 } from "@/lib/types"
@@ -479,6 +480,212 @@ export async function generatePositionRecommendation(
     sellTargets: parseSellTargets(raw.sell_targets),
     stopLossPrice: toPrice(raw.stop_loss_price),
     conviction,
+  }
+}
+
+/** Stable system instructions for the watchlist entry recommendation. */
+const ENTRY_SYSTEM_PROMPT = `Tu es un moteur de recommandation pour une
+application de suivi de portefeuille d'actions. Pour une action que
+l'utilisateur surveille mais ne détient pas encore, tu détermines un POINT
+D'ENTRÉE : le prix auquel il serait pertinent de l'acheter, en tenant compte
+du cours et de sa dynamique, de la volatilité, des indicateurs techniques, des
+fondamentaux, des objectifs de cours des analystes et des actualités récentes.
+
+Règles :
+- entry_target_price est le prix d'achat conseillé, dans la devise de l'action.
+  Vise un point d'entrée réaliste : un repli sur un support récent, une moyenne
+  mobile, ou un niveau cohérent avec la fourchette des analystes.
+- action = "buy_now" si le cours actuel est déjà à un niveau d'entrée
+  intéressant (entry_target_price proche ou au-dessus du cours actuel) ;
+  "wait" s'il vaut mieux attendre un repli vers entry_target_price.
+- Un RSI supérieur à 70 signale un titre suracheté (mieux vaut attendre un
+  repli) ; inférieur à 30, un titre survendu (entrée plus opportune). Un cours
+  sous sa moyenne mobile 200 jours traduit une tendance de fond baissière.
+- Si l'utilisateur a fixé un gain cible, garde-le à l'esprit : un bon point
+  d'entrée laisse une marge de hausse suffisante pour l'atteindre.
+- conviction reflète ta confiance compte tenu des données disponibles : des
+  données fondamentales ou d'analystes manquantes la réduisent.
+- rationale : 1 à 2 phrases en français justifiant le point d'entrée.
+- Si le cours est indisponible, renvoie entry_target_price à null.
+
+Réponds uniquement en appelant l'outil submit_entry_recommendation. Ces
+recommandations sont une aide à la décision, pas un conseil en investissement
+réglementé.`
+
+const ENTRY_TOOL: Anthropic.Tool = {
+  name: "submit_entry_recommendation",
+  description:
+    "Enregistre la recommandation de point d'entrée pour l'action surveillée.",
+  input_schema: {
+    type: "object",
+    properties: {
+      action: {
+        type: "string",
+        enum: ["buy_now", "wait"],
+        description:
+          "buy_now : le cours est déjà à un bon point d'entrée. wait : attendre un repli vers entry_target_price.",
+      },
+      entry_target_price: {
+        type: ["number", "null"],
+        description:
+          "Prix d'achat conseillé, dans la devise de l'action. null si le cours est indisponible.",
+      },
+      conviction: {
+        type: "string",
+        enum: ["low", "medium", "high"],
+        description: "Niveau de confiance dans la recommandation.",
+      },
+      rationale: {
+        type: "string",
+        description: "1 à 2 phrases en français justifiant le point d'entrée.",
+      },
+    },
+    required: ["action", "entry_target_price", "conviction", "rationale"],
+  },
+}
+
+export interface EntryRecommendationInput {
+  symbol: string
+  name: string | null
+  currency: string
+  /** Gain the user aims for once bought, in percent, when set. */
+  targetGainPercent: number | null
+  currentPrice: number | null
+  dayChangePercent: number | null
+  fiftyTwoWeekHigh: number | null
+  fiftyTwoWeekLow: number | null
+  /** Annualized volatility in percent, when computable. */
+  volatilityPercent: number | null
+  /** Technical indicators, or `null` when the history is too short. */
+  indicators: TechnicalIndicators | null
+  /** Fundamentals and analyst data (fields may be `null`). */
+  fundamentals: StockFundamentals
+  news: RecommendationNewsItem[]
+}
+
+export interface EntryRecommendationResult {
+  action: EntryAction
+  entryTargetPrice: number | null
+  conviction: ConvictionLevel
+  rationale: string
+}
+
+function buildEntryPrompt(input: EntryRecommendationInput): string {
+  const pct = (value: number | null, digits = 2) =>
+    value === null ? "n/a" : `${value.toFixed(digits)} %`
+  const num = (value: number | null | undefined) =>
+    value === null || value === undefined ? "n/a" : value.toFixed(2)
+
+  const indicators = input.indicators
+  const f = input.fundamentals
+
+  const marketCap =
+    f.marketCap === null
+      ? "n/a"
+      : `${(f.marketCap / 1e9).toFixed(1)} Md ${input.currency}`
+  const dividendYield =
+    f.dividendYield === null
+      ? "n/a"
+      : `${(f.dividendYield * 100).toFixed(2)} %`
+  const analystCount = f.numberOfAnalysts
+    ? ` (${f.numberOfAnalysts} analystes)`
+    : ""
+
+  const news =
+    input.news.length > 0
+      ? input.news
+          .map((item) => {
+            const age =
+              item.ageDays <= 0 ? "aujourd'hui" : `il y a ${item.ageDays} j`
+            return `- [${age}, ${item.publisher}] ${item.title}`
+          })
+          .join("\n")
+      : "(aucune actualité récente)"
+
+  return `Analyse cette action surveillée et soumets une recommandation de point d'entrée.
+
+Action : ${input.symbol}${input.name ? ` (${input.name})` : ""}
+Devise : ${input.currency}
+Cours actuel : ${num(input.currentPrice)} ${input.currency}
+Variation du jour : ${pct(input.dayChangePercent)}
+Plus haut 52 semaines : ${num(input.fiftyTwoWeekHigh)}
+Plus bas 52 semaines : ${num(input.fiftyTwoWeekLow)}
+Volatilité annualisée : ${pct(input.volatilityPercent, 1)}
+Gain cible visé : ${input.targetGainPercent === null ? "non fixé" : `${input.targetGainPercent} %`}
+
+Indicateurs techniques :
+- Moyenne mobile 50 jours : ${num(indicators?.sma50)}
+- Moyenne mobile 200 jours : ${num(indicators?.sma200)}
+- RSI 14 : ${indicators?.rsi14 == null ? "n/a" : indicators.rsi14.toFixed(0)}
+- ATR 14 (volatilité absolue) : ${num(indicators?.atr14)}
+- Support récent (plus bas 20 jours) : ${num(indicators?.recentLow)}
+- Résistance récente (plus haut 20 jours) : ${num(indicators?.recentHigh)}
+
+Objectifs des analystes :
+- Objectif de cours moyen : ${num(f.targetMeanPrice)} ${input.currency}
+- Fourchette : ${num(f.targetLowPrice)} – ${num(f.targetHighPrice)} ${input.currency}
+- Consensus : ${f.recommendationKey ?? "n/a"}${analystCount}
+
+Fondamentaux :
+- PER : ${num(f.trailingPE)}
+- PER prévisionnel : ${num(f.forwardPE)}
+- BPA : ${num(f.trailingEps)}
+- Capitalisation : ${marketCap}
+- Rendement du dividende : ${dividendYield}
+- Bêta : ${num(f.beta)}
+
+Actualités récentes :
+${news}`
+}
+
+const ENTRY_ACTIONS: readonly EntryAction[] = ["buy_now", "wait"]
+
+/**
+ * Generates a structured entry-point recommendation for a watched stock.
+ * Claude is forced to answer through the `submit_entry_recommendation` tool so
+ * the output is always a typed object rather than free text.
+ */
+export async function generateEntryRecommendation(
+  input: EntryRecommendationInput
+): Promise<EntryRecommendationResult> {
+  const message = await getClient().messages.create({
+    model: MODEL,
+    max_tokens: MAX_TOKENS,
+    system: [
+      {
+        type: "text",
+        text: ENTRY_SYSTEM_PROMPT,
+        cache_control: { type: "ephemeral" },
+      },
+    ],
+    tools: [ENTRY_TOOL],
+    tool_choice: { type: "tool", name: ENTRY_TOOL.name },
+    messages: [{ role: "user", content: buildEntryPrompt(input) }],
+  })
+
+  const toolUse = message.content.find(
+    (block): block is Anthropic.ToolUseBlock =>
+      block.type === "tool_use" && block.name === ENTRY_TOOL.name
+  )
+  if (!toolUse) {
+    throw new Error("Claude did not return an entry recommendation")
+  }
+
+  const raw = toolUse.input as Record<string, unknown>
+  const action = raw.action as EntryAction
+  const conviction = raw.conviction as ConvictionLevel
+  if (
+    !ENTRY_ACTIONS.includes(action) ||
+    !CONVICTION_LEVELS.includes(conviction)
+  ) {
+    throw new Error("Claude returned an invalid entry recommendation")
+  }
+
+  return {
+    action,
+    entryTargetPrice: toPrice(raw.entry_target_price),
+    conviction,
+    rationale: typeof raw.rationale === "string" ? raw.rationale.trim() : "",
   }
 }
 

@@ -4,7 +4,13 @@ import { NextResponse, type NextRequest } from "next/server"
 import type { Database } from "@/lib/database.types"
 
 /** Route prefixes that require an authenticated user. */
-const PROTECTED_PREFIXES = ["/dashboard", "/positions", "/alerts", "/ai"]
+const PROTECTED_PREFIXES = [
+  "/dashboard",
+  "/positions",
+  "/watchlist",
+  "/alerts",
+  "/ai",
+]
 
 /**
  * Refreshes the Supabase auth session on every request and guards the

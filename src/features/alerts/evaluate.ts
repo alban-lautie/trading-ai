@@ -50,11 +50,23 @@ function formatAlertMessage(
   threshold: number,
   quote: QuoteSnapshot,
   proposalKind: string | null,
-  tranchePercent: number | null
+  tranchePercent: number | null,
+  isWatchlistEntry: boolean
 ): string {
   const unit = isPercentAlertType(type) ? " %" : ""
   const condition = `Condition : ${ALERT_TYPE_LABELS[type]} ${threshold}${unit}`
   const price = `Cours actuel : ${quote.price} ${quote.currency}`
+
+  if (isWatchlistEntry) {
+    return [
+      "🎯 *Trading AI* — Point d'entrée atteint",
+      "",
+      `*${symbol}*`,
+      "Le cours a atteint le point d'entrée recommandé par l'IA. C'est le moment d'envisager un achat.",
+      condition,
+      price,
+    ].join("\n")
+  }
 
   if (proposalKind && proposalKind.startsWith("take_profit")) {
     const tier = proposalKind.split("_")[2]
@@ -107,7 +119,7 @@ export async function evaluateAlerts(): Promise<EvaluateResult> {
   const { data: alerts, error } = await supabase
     .from("alerts")
     .select(
-      "id, user_id, symbol, type, threshold, proposal_kind, tranche_percent, position:positions(average_price)"
+      "id, user_id, symbol, type, threshold, proposal_kind, tranche_percent, watchlist_id, position:positions(average_price)"
     )
     .eq("is_active", true)
     .is("triggered_at", null)
@@ -181,7 +193,8 @@ export async function evaluateAlerts(): Promise<EvaluateResult> {
           threshold,
           quote,
           alert.proposal_kind,
-          alert.tranche_percent
+          alert.tranche_percent,
+          alert.watchlist_id !== null
         )
       )
     } catch {

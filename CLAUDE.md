@@ -39,6 +39,16 @@ Application web de suivi de portefeuille d'actions. L'utilisateur saisit ses pos
 - Paramétrable : fréquence, ton, axes d'analyse (risque, diversification, opportunités).
 - Restitution par email (Resend) et/ou dans l'interface.
 
+### Watchlist
+- Une **watchlist** = des actions pas encore achetées que l'utilisateur surveille
+  (table `watchlist`, distincte de `positions`).
+- L'IA recommande un **point d'entrée** (`entry_action` acheter/attendre,
+  `recommended_entry_price`, `conviction`, `rationale`) ; la recommandation est
+  stockée en ligne sur la table. Génération **à la demande**.
+- Une alerte `price_below` (table `alerts`, colonne `watchlist_id`) est armée
+  au prix d'entrée conseillé → notification **Telegram** quand le cours
+  l'atteint.
+
 ## Conventions de code
 
 - **Tout le code en anglais** : variables, fonctions, types, composants, commentaires, logs, noms de fichiers. Seuls la documentation et les communications utilisateur sont en français.

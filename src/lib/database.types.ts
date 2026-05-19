@@ -108,6 +108,7 @@ export type Database = {
           type: Database["public"]["Enums"]["alert_type"]
           updated_at: string
           user_id: string
+          watchlist_id: string | null
         }
         Insert: {
           created_at?: string
@@ -122,6 +123,7 @@ export type Database = {
           type: Database["public"]["Enums"]["alert_type"]
           updated_at?: string
           user_id: string
+          watchlist_id?: string | null
         }
         Update: {
           created_at?: string
@@ -136,6 +138,7 @@ export type Database = {
           type?: Database["public"]["Enums"]["alert_type"]
           updated_at?: string
           user_id?: string
+          watchlist_id?: string | null
         }
         Relationships: [
           {
@@ -143,6 +146,13 @@ export type Database = {
             columns: ["position_id"]
             isOneToOne: false
             referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alerts_watchlist_id_fkey"
+            columns: ["watchlist_id"]
+            isOneToOne: false
+            referencedRelation: "watchlist"
             referencedColumns: ["id"]
           },
         ]
@@ -326,6 +336,57 @@ export type Database = {
         }
         Relationships: []
       }
+      watchlist: {
+        Row: {
+          conviction: Database["public"]["Enums"]["conviction_level"] | null
+          created_at: string
+          currency: string
+          entry_action: Database["public"]["Enums"]["entry_action"] | null
+          id: string
+          name: string | null
+          notes: string | null
+          rationale: string | null
+          recommendation_generated_at: string | null
+          recommended_entry_price: number | null
+          symbol: string
+          target_gain_percent: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          conviction?: Database["public"]["Enums"]["conviction_level"] | null
+          created_at?: string
+          currency?: string
+          entry_action?: Database["public"]["Enums"]["entry_action"] | null
+          id?: string
+          name?: string | null
+          notes?: string | null
+          rationale?: string | null
+          recommendation_generated_at?: string | null
+          recommended_entry_price?: number | null
+          symbol: string
+          target_gain_percent?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          conviction?: Database["public"]["Enums"]["conviction_level"] | null
+          created_at?: string
+          currency?: string
+          entry_action?: Database["public"]["Enums"]["entry_action"] | null
+          id?: string
+          name?: string | null
+          notes?: string | null
+          rationale?: string | null
+          recommendation_generated_at?: string | null
+          recommended_entry_price?: number | null
+          symbol?: string
+          target_gain_percent?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -344,6 +405,7 @@ export type Database = {
         | "unrealized_gain_above"
         | "unrealized_loss_above"
       conviction_level: "low" | "medium" | "high"
+      entry_action: "buy_now" | "wait"
       position_horizon: "short" | "medium" | "long"
       position_objective: "quick_gain" | "long_term" | "income"
       recommendation_action: "sell_now" | "hold" | "reinforce"
@@ -489,6 +551,7 @@ export const Constants = {
         "unrealized_loss_above",
       ],
       conviction_level: ["low", "medium", "high"],
+      entry_action: ["buy_now", "wait"],
       position_horizon: ["short", "medium", "long"],
       position_objective: ["quick_gain", "long_term", "income"],
       recommendation_action: ["sell_now", "hold", "reinforce"],
