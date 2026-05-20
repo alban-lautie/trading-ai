@@ -259,6 +259,7 @@ export type Database = {
           currency: string
           horizon: Database["public"]["Enums"]["position_horizon"]
           id: string
+          monitoring_enabled: boolean
           name: string | null
           notes: string | null
           objective: Database["public"]["Enums"]["position_objective"]
@@ -276,6 +277,7 @@ export type Database = {
           currency?: string
           horizon?: Database["public"]["Enums"]["position_horizon"]
           id?: string
+          monitoring_enabled?: boolean
           name?: string | null
           notes?: string | null
           objective?: Database["public"]["Enums"]["position_objective"]
@@ -293,6 +295,7 @@ export type Database = {
           currency?: string
           horizon?: Database["public"]["Enums"]["position_horizon"]
           id?: string
+          monitoring_enabled?: boolean
           name?: string | null
           notes?: string | null
           objective?: Database["public"]["Enums"]["position_objective"]

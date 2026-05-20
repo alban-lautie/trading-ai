@@ -8,6 +8,7 @@ import { PositionBenchmarks } from "@/components/positions/position-benchmarks"
 import { PositionDetailActions } from "@/components/positions/position-detail-actions"
 import { PositionEntryCard } from "@/components/positions/position-entry-card"
 import { PositionInfoCard } from "@/components/positions/position-info-card"
+import { PositionMonitoringSwitch } from "@/components/positions/position-monitoring-switch"
 import { PositionInsight } from "@/components/positions/position-insight"
 import { PositionMetricCards } from "@/components/positions/position-metric-cards"
 import { PositionNews } from "@/components/positions/position-news"
@@ -59,7 +60,13 @@ export default async function PositionDetailPage({
             <p className="text-muted-foreground text-sm">{position.name}</p>
           ) : null}
         </div>
-        <PositionDetailActions position={position} />
+        <div className="flex items-center gap-3">
+          <PositionMonitoringSwitch
+            positionId={position.id}
+            initialEnabled={position.monitoring_enabled}
+          />
+          <PositionDetailActions position={position} />
+        </div>
       </header>
 
       <PositionMetricCards metrics={metrics} />

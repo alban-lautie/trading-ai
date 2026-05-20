@@ -119,7 +119,7 @@ export async function evaluateAlerts(): Promise<EvaluateResult> {
   const { data: alerts, error } = await supabase
     .from("alerts")
     .select(
-      "id, user_id, symbol, type, threshold, proposal_kind, tranche_percent, watchlist_id, position:positions(average_price)"
+      "id, user_id, symbol, type, threshold, proposal_kind, tranche_percent, watchlist_id, position:positions(average_price, monitoring_enabled)"
     )
     .eq("is_active", true)
     .is("triggered_at", null)
@@ -171,6 +171,12 @@ export async function evaluateAlerts(): Promise<EvaluateResult> {
   for (const alert of alerts) {
     const quote = quotes.get(alert.symbol.toUpperCase())
     if (!quote) continue
+
+    // Position alerts are skipped while monitoring is paused; watchlist
+    // alerts (no linked position) are always evaluated.
+    if (alert.position && alert.position.monitoring_enabled === false) {
+      continue
+    }
 
     const averagePrice = alert.position
       ? Number(alert.position.average_price)

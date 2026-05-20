@@ -24,13 +24,20 @@ export async function generateDailySummary(
 ): Promise<boolean> {
   const summary = summarizePortfolio(rows)
 
+  // Paused positions are excluded from the AI analysis but keep contributing
+  // to the portfolio totals; the summary still reflects the real holdings.
+  const monitored = rows.filter((row) => row.position.monitoring_enabled)
+  if (monitored.length === 0) {
+    return false
+  }
+
   let content: string
   try {
     content = await composeDailySummary({
       totalValue: summary.marketValue,
       totalPnlPercent: summary.unrealizedPnlPercent,
       positions: buildDailySummaryPositions(
-        rows,
+        monitored,
         summary.marketValue,
         recommendations
       ),

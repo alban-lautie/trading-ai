@@ -67,10 +67,13 @@ export async function recomputeRegionRecommendations(
       positionCount: rows.length,
     }
 
-    // Only positions trading in the given region are recomputed; the rest
-    // keep their last recommendation.
+    // Only positions trading in the given region whose monitoring is active
+    // are recomputed; paused positions and other regions keep their last
+    // recommendation.
     const toRecompute = rows.filter(
-      (row) => regionForCurrency(row.position.currency) === region
+      (row) =>
+        row.position.monitoring_enabled &&
+        regionForCurrency(row.position.currency) === region
     )
     if (toRecompute.length === 0) {
       continue

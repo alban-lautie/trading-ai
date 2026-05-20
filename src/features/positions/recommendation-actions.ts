@@ -26,6 +26,12 @@ export async function generateRecommendationNow(
   if (!metrics) {
     return { error: "Position introuvable." }
   }
+  if (!metrics.position.monitoring_enabled) {
+    return {
+      error:
+        "La surveillance est en pause sur cette position. Réactivez-la pour générer une recommandation.",
+    }
+  }
 
   const result = await runPositionRecommendation(supabase, metrics, {
     portfolioTotalValue: portfolio.summary.marketValue,
@@ -61,6 +67,7 @@ export async function generateAllRecommendations(): Promise<RecommendationAction
 
   let generated = 0
   for (const row of portfolio.rows) {
+    if (!row.position.monitoring_enabled) continue
     const result = await runPositionRecommendation(supabase, row, context)
     if (result) {
       generated += 1

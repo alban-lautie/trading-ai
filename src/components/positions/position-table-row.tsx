@@ -1,6 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
+import { EyeOff } from "lucide-react"
 
 import { PositionRowActions } from "@/components/positions/position-row-actions"
 import { TableCell, TableRow } from "@/components/ui/table"
@@ -32,7 +33,16 @@ export function PositionTableRow({ row }: PositionTableRowProps) {
       onClick={() => router.push(`/positions/${position.id}`)}
     >
       <TableCell>
-        <div className="font-medium">{position.symbol}</div>
+        <div className="flex items-center gap-1.5 font-medium">
+          {position.symbol}
+          {!position.monitoring_enabled ? (
+            <EyeOff
+              size={13}
+              className="text-muted-foreground"
+              aria-label="Surveillance en pause"
+            />
+          ) : null}
+        </div>
         {position.name ? (
           <div className="text-muted-foreground text-xs">{position.name}</div>
         ) : null}

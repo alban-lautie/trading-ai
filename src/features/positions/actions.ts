@@ -106,6 +106,32 @@ export async function updatePosition(
   return { success: true }
 }
 
+/**
+ * Pauses or resumes monitoring of a position: when disabled, alert evaluation,
+ * AI sell recommendations and inclusion in the daily AI summary are all
+ * skipped. The position itself stays visible and counts in the portfolio
+ * totals.
+ */
+export async function setPositionMonitoring(
+  positionId: string,
+  enabled: boolean
+): Promise<ActionResult> {
+  const { supabase } = await requireUser()
+
+  const { error } = await supabase
+    .from("positions")
+    .update({ monitoring_enabled: enabled })
+    .eq("id", positionId)
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePortfolio()
+  revalidatePath(`/positions/${positionId}`)
+  return { success: true }
+}
+
 /** Deletes a position owned by the current user. */
 export async function deletePosition(positionId: string): Promise<ActionResult> {
   const { supabase } = await requireUser()
