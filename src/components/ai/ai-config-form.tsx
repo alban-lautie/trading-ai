@@ -38,9 +38,9 @@ const FREQUENCY_LABELS: Record<(typeof aiFrequencies)[number], string> = {
 }
 
 const DELIVERY_LABELS: Record<(typeof aiDeliveries)[number], string> = {
-  email: "Par email",
+  telegram: "Telegram",
   in_app: "Dans l'application",
-  both: "Email + application",
+  both: "Telegram + application",
 }
 
 const FOCUS_LABELS: Record<(typeof aiFocusAreas)[number], string> = {

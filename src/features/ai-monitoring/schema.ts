@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 export const aiFrequencies = ["daily", "weekly", "monthly"] as const
-export const aiDeliveries = ["email", "in_app", "both"] as const
+export const aiDeliveries = ["telegram", "in_app", "both"] as const
 
 /** Focus areas the user can ask the AI monitoring to emphasize. */
 export const aiFocusAreas = [

@@ -398,7 +398,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      ai_delivery: "email" | "in_app" | "both"
+      ai_delivery: "telegram" | "in_app" | "both"
       ai_frequency: "daily" | "weekly" | "monthly"
       alert_type:
         | "price_above"
@@ -543,7 +543,7 @@ export const Constants = {
   },
   public: {
     Enums: {
-      ai_delivery: ["email", "in_app", "both"],
+      ai_delivery: ["telegram", "in_app", "both"],
       ai_frequency: ["daily", "weekly", "monthly"],
       alert_type: [
         "price_above",

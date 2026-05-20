@@ -7,8 +7,7 @@ import { aiConfigSchema } from "@/features/ai-monitoring/schema"
 import { getPortfolio } from "@/features/positions/queries"
 import type { ActionResult } from "@/features/positions/actions"
 import { generatePortfolioAnalysis } from "@/lib/ai/claude"
-import { sendEmail } from "@/lib/email/resend"
-import { renderAiReportEmail } from "@/lib/email/templates"
+import { sendTelegramMessage } from "@/lib/telegram/client"
 
 /** Persists the user's AI monitoring configuration. */
 export async function updateAiConfig(
@@ -44,7 +43,9 @@ export async function updateAiConfig(
 
 /**
  * Runs an on-demand AI analysis of the portfolio, stores the report, and
- * emails it when the user's delivery setting includes email.
+ * pushes it to the user's Telegram when the delivery setting includes
+ * Telegram. Telegram delivery is best-effort: a missing chat link or a
+ * delivery failure does not roll back the saved report.
  */
 export async function generateReportNow(): Promise<ActionResult> {
   const { user, supabase } = await requireUser()
@@ -61,7 +62,7 @@ export async function generateReportNow(): Promise<ActionResult> {
     frequency: "weekly" as const,
     tone: "neutral",
     focus_areas: ["risk", "diversification", "opportunities"],
-    delivery: "email" as const,
+    delivery: "telegram" as const,
     id: "",
     last_run_at: null,
     created_at: "",
@@ -95,12 +96,22 @@ export async function generateReportNow(): Promise<ActionResult> {
     .update({ last_run_at: new Date().toISOString() })
     .eq("user_id", user.id)
 
-  if (config.delivery !== "in_app" && user.email) {
-    try {
-      const { subject, html } = renderAiReportEmail(analysis)
-      await sendEmail({ to: user.email, subject, html })
-    } catch {
-      // The report is saved; emailing is best-effort.
+  if (config.delivery !== "in_app") {
+    const { data: notif } = await supabase
+      .from("notification_settings")
+      .select("telegram_chat_id")
+      .eq("user_id", user.id)
+      .maybeSingle()
+    const chatId = notif?.telegram_chat_id
+    if (chatId) {
+      try {
+        await sendTelegramMessage(
+          chatId,
+          `🧠 *Trading AI* — Analyse de portefeuille\n\n${analysis}`
+        )
+      } catch {
+        // The report is saved; Telegram delivery is best-effort.
+      }
     }
   }
 

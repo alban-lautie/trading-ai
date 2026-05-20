@@ -13,7 +13,7 @@ export function defaultAiConfig(userId: string): AiMonitoringConfig {
     frequency: "weekly",
     tone: "neutral",
     focus_areas: ["risk", "diversification", "opportunities"],
-    delivery: "email",
+    delivery: "telegram",
     last_run_at: null,
     created_at: now,
     updated_at: now,

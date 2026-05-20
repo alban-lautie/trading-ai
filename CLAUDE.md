@@ -9,8 +9,7 @@ Application web de suivi de portefeuille d'actions. L'utilisateur saisit ses pos
 - **Next.js 16** — App Router, TypeScript strict (pas de `any` implicite). ⚠️ Voir `AGENTS.md` : cette version a des breaking changes, consulter `node_modules/next/dist/docs/` avant d'écrire du code Next.js.
 - **shadcn/ui** — bibliothèque de composants UI (Radix + Tailwind v4).
 - **Supabase** — base de données Postgres, authentification, Row Level Security. **En local** (Supabase CLI / Docker), pas d'instance cloud en développement.
-- **Telegram Bot API** — notifications d'alertes poussées sur le téléphone.
-- **Resend** — envoi des emails du suivi IA.
+- **Telegram Bot API** — notifications d'alertes et livraison du suivi IA poussées sur le téléphone.
 - **Yahoo Finance** (API non officielle) — cours des actions en temps réel.
 - **Anthropic Claude** — moteur du suivi IA paramétrable.
 
@@ -37,7 +36,7 @@ Application web de suivi de portefeuille d'actions. L'utilisateur saisit ses pos
 ### Suivi IA paramétrable
 - Analyse du portefeuille par Claude (API Anthropic).
 - Paramétrable : fréquence, ton, axes d'analyse (risque, diversification, opportunités).
-- Restitution par email (Resend) et/ou dans l'interface.
+- Restitution sur **Telegram** et/ou dans l'interface.
 
 ### Watchlist
 - Une **watchlist** = des actions pas encore achetées que l'utilisateur surveille
@@ -88,7 +87,7 @@ Application web de suivi de portefeuille d'actions. L'utilisateur saisit ses pos
 ## Sécurité
 
 - **Row Level Security** activée sur toutes les tables Supabase : un utilisateur n'accède qu'à ses propres positions et alertes.
-- Ne jamais exposer la clé de service Supabase, la clé Resend ni la clé Anthropic côté client — variables d'environnement serveur uniquement.
+- Ne jamais exposer la clé de service Supabase, le token Telegram Bot ni la clé Anthropic côté client — variables d'environnement serveur uniquement.
 - Pour supprimer un fichier en local, utiliser `trash` (jamais `rm`).
 
 ## SEO
@@ -114,7 +113,6 @@ src/
     supabase/         clients Supabase (browser, server, middleware)
     market-data/      couche d'abstraction cotations (Yahoo Finance)
     telegram/         client Telegram Bot API
-    email/            wrapper Resend
     ai/               wrapper Anthropic Claude
 supabase/
   config.toml         config locale (ports +200)
