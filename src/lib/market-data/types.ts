@@ -96,6 +96,35 @@ export interface PriceHistory {
   dayLow: number | null
 }
 
+/** Intraday interval supported by the provider. */
+export type IntradayInterval = "1m" | "5m" | "15m" | "30m" | "60m"
+
+/** Intraday range supported by the provider (capped by the interval). */
+export type IntradayRange = "1d" | "5d" | "7d" | "1mo"
+
+/** A single intraday point: candle with a precise timestamp. */
+export interface IntradayPoint {
+  /** ISO timestamp at the start of the candle. */
+  timestamp: string
+  /** Last traded price at the close of the candle. */
+  close: number
+  open: number | null
+  high: number | null
+  low: number | null
+  volume: number | null
+}
+
+/** Intraday price history of a symbol. */
+export interface IntradayHistory {
+  interval: IntradayInterval
+  range: IntradayRange
+  points: IntradayPoint[]
+  currency: string
+  /** Regular trading session bounds reported by the provider (Unix epoch ms). */
+  sessionStart: number | null
+  sessionEnd: number | null
+}
+
 /** A news article about a symbol. */
 export interface NewsItem {
   id: string

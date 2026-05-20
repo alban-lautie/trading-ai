@@ -39,3 +39,10 @@ export type AiFrequency = Enums["ai_frequency"]
 export type AiDelivery = Enums["ai_delivery"]
 
 export type NotificationSettings = Tables["notification_settings"]["Row"]
+
+export type ChatConversation = Tables["chat_conversations"]["Row"]
+export type ChatConversationInsert = Tables["chat_conversations"]["Insert"]
+export type ChatConversationUpdate = Tables["chat_conversations"]["Update"]
+export type ChatMessage = Tables["chat_messages"]["Row"]
+export type ChatMessageInsert = Tables["chat_messages"]["Insert"]
+export type ChatRole = Enums["chat_role"]

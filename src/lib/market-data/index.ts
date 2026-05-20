@@ -8,6 +8,10 @@ export type {
   ChartRange,
   PriceHistory,
   PricePoint,
+  IntradayHistory,
+  IntradayInterval,
+  IntradayPoint,
+  IntradayRange,
   NewsItem,
   TechnicalIndicators,
   StockFundamentals,
@@ -16,6 +20,8 @@ export { MarketDataError } from "@/lib/market-data/types"
 
 /** Fetches the price history of a symbol for a given range. */
 export { fetchYahooChart as getPriceHistory } from "@/lib/market-data/chart"
+/** Fetches the intraday price history of a symbol for the given range/interval. */
+export { fetchYahooIntraday as getIntradayHistory } from "@/lib/market-data/intraday"
 /** Fetches recent news for a symbol (best-effort, never throws). */
 export { fetchYahooNews as getStockNews } from "@/lib/market-data/news"
 /** Computes technical indicators from a price history. */

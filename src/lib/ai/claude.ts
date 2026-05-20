@@ -164,6 +164,228 @@ Plus bas 52 semaines : ${input.fiftyTwoWeekLow ?? "n/a"}`
     .trim()
 }
 
+/** Stable system instructions for the conversational chat about a position. */
+const CHAT_SYSTEM_PROMPT = `Tu es un assistant conversationnel pour une
+application de suivi de portefeuille d'actions. L'utilisateur discute avec toi
+au sujet d'une position qu'il détient. Pour répondre, tu peux appeler des
+outils qui te donnent l'état de la position, la courbe (intraday ou daily),
+les indicateurs techniques, les actualités et les fondamentaux.
+
+Règles d'usage des outils :
+- Appelle systématiquement get_position_state au premier tour pour connaître
+  la position, sauf si la question ne porte clairement pas sur la position
+  liée à cette conversation.
+- Pour une question sur la séance du jour, appelle get_intraday_chart avec
+  interval="1m" et range="1d". Pour une lecture sur la semaine passée,
+  interval="1m" et range="7d" (la limite du fournisseur). Pour un horizon
+  plus long, prends interval="5m" ou "15m" avec range="1mo".
+- Pour une question sur la tendance de fond (semaines à mois), utilise
+  get_daily_chart avec range="1mo", "6mo" ou "1y".
+- Appelle get_indicators si la question porte sur RSI, moyennes mobiles,
+  supports/résistances ou volatilité.
+- Appelle get_news si l'utilisateur cherche à expliquer un mouvement, ou
+  parle d'actualité, de catalyseur, de communiqué.
+- Appelle get_fundamentals pour le PER, le BPA, la capitalisation, les
+  objectifs de cours des analystes.
+- Tu peux appeler plusieurs outils en parallèle dans le même tour si la
+  réponse en a besoin. N'appelle pas un outil si l'historique du chat
+  contient déjà l'information.
+
+Réponds en français, de façon directe et concrète, en t'appuyant sur les
+données que les outils renvoient. Cite les chiffres clés. Tu n'es pas
+conseiller financier : ne donne pas d'ordre d'achat ou de vente définitif et
+rappelle, lorsque c'est pertinent, que ce n'est pas un conseil en
+investissement.`
+
+const CHAT_MAX_TOKENS = 2048
+const CHAT_MAX_TOOL_ITERATIONS = 5
+
+const CHAT_TOOLS: Anthropic.Tool[] = [
+  {
+    name: "get_position_state",
+    description:
+      "Renvoie l'état actuel de la position attachée à la conversation : symbole, quantité, prix d'achat moyen, cours actuel, plus/moins-value latente, devise.",
+    input_schema: {
+      type: "object",
+      properties: {
+        symbol: {
+          type: "string",
+          description:
+            "Symbole boursier. Optionnel : par défaut, la position liée à la conversation.",
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "get_intraday_chart",
+    description:
+      "Renvoie les bougies intraday d'un symbole (open/high/low/close/volume par bougie). Utilise un format CSV compact. Respecte les limites du fournisseur : interval=1m → range max 7d ; 5m/15m → max 1mo.",
+    input_schema: {
+      type: "object",
+      properties: {
+        symbol: { type: "string", description: "Symbole boursier." },
+        interval: {
+          type: "string",
+          enum: ["1m", "5m", "15m", "30m", "60m"],
+          description: "Granularité de la bougie.",
+        },
+        range: {
+          type: "string",
+          enum: ["1d", "5d", "7d", "1mo"],
+          description: "Fenêtre de temps couverte.",
+        },
+      },
+      required: ["symbol", "interval", "range"],
+    },
+  },
+  {
+    name: "get_daily_chart",
+    description:
+      "Renvoie l'historique journalier d'un symbole en CSV compact. Idéal pour la tendance de fond et le range 52 semaines.",
+    input_schema: {
+      type: "object",
+      properties: {
+        symbol: { type: "string", description: "Symbole boursier." },
+        range: {
+          type: "string",
+          enum: ["1mo", "6mo", "1y"],
+          description: "Fenêtre de temps couverte.",
+        },
+      },
+      required: ["symbol", "range"],
+    },
+  },
+  {
+    name: "get_indicators",
+    description:
+      "Renvoie les indicateurs techniques d'un symbole : SMA50, SMA200, RSI14, ATR14, support et résistance récents.",
+    input_schema: {
+      type: "object",
+      properties: {
+        symbol: { type: "string", description: "Symbole boursier." },
+      },
+      required: ["symbol"],
+    },
+  },
+  {
+    name: "get_news",
+    description:
+      "Renvoie les actualités récentes sur un symbole (titre, source, ancienneté).",
+    input_schema: {
+      type: "object",
+      properties: {
+        symbol: { type: "string", description: "Symbole boursier." },
+      },
+      required: ["symbol"],
+    },
+  },
+  {
+    name: "get_fundamentals",
+    description:
+      "Renvoie les fondamentaux d'un symbole : PER, PER prévisionnel, BPA, capitalisation, dividende, beta, objectifs des analystes.",
+    input_schema: {
+      type: "object",
+      properties: {
+        symbol: { type: "string", description: "Symbole boursier." },
+      },
+      required: ["symbol"],
+    },
+  },
+]
+
+/** Callback the caller exposes so Claude can fetch data on demand. */
+export type ChatToolRunner = (
+  name: string,
+  input: Record<string, unknown>
+) => Promise<string>
+
+export interface ChatTurnResult {
+  reply: string
+  /** Number of tool round-trips consumed by this turn. */
+  toolIterations: number
+}
+
+/**
+ * Drives a conversational turn with Claude, with tool use. The caller provides
+ * the conversation history (Anthropic-formatted) plus a `runTool` callback
+ * that executes a tool call and returns its result as a string. The loop
+ * stops when Claude returns `end_turn` or when `CHAT_MAX_TOOL_ITERATIONS` is
+ * reached, whichever comes first.
+ */
+export async function chatAboutPosition(
+  messages: Anthropic.MessageParam[],
+  runTool: ChatToolRunner
+): Promise<ChatTurnResult> {
+  const client = getClient()
+  const working: Anthropic.MessageParam[] = [...messages]
+
+  for (let iteration = 0; iteration < CHAT_MAX_TOOL_ITERATIONS; iteration += 1) {
+    const response = await client.messages.create({
+      model: MODEL,
+      max_tokens: CHAT_MAX_TOKENS,
+      system: [
+        {
+          type: "text",
+          text: CHAT_SYSTEM_PROMPT,
+          cache_control: { type: "ephemeral" },
+        },
+      ],
+      tools: CHAT_TOOLS,
+      messages: working,
+    })
+
+    const toolUses = response.content.filter(
+      (block): block is Anthropic.ToolUseBlock => block.type === "tool_use"
+    )
+
+    if (response.stop_reason !== "tool_use" || toolUses.length === 0) {
+      const reply = response.content
+        .filter((block): block is Anthropic.TextBlock => block.type === "text")
+        .map((block) => block.text)
+        .join("\n")
+        .trim()
+      return { reply, toolIterations: iteration }
+    }
+
+    working.push({ role: "assistant", content: response.content })
+
+    const toolResults = await Promise.all(
+      toolUses.map(async (toolUse) => {
+        try {
+          const content = await runTool(
+            toolUse.name,
+            (toolUse.input ?? {}) as Record<string, unknown>
+          )
+          return {
+            type: "tool_result" as const,
+            tool_use_id: toolUse.id,
+            content,
+          }
+        } catch (cause) {
+          return {
+            type: "tool_result" as const,
+            tool_use_id: toolUse.id,
+            content:
+              cause instanceof Error
+                ? `Error: ${cause.message}`
+                : "Error: tool execution failed",
+            is_error: true,
+          }
+        }
+      })
+    )
+
+    working.push({ role: "user", content: toolResults })
+  }
+
+  return {
+    reply:
+      "Désolé, je n'ai pas pu finaliser la réponse dans le nombre d'étapes autorisé. Reformule ta question ou demande une analyse plus ciblée.",
+    toolIterations: CHAT_MAX_TOOL_ITERATIONS,
+  }
+}
+
 /** Stable system instructions for the per-position sell recommendation. */
 const RECOMMENDATION_SYSTEM_PROMPT = `Tu es un moteur de recommandation pour une
 application de suivi de portefeuille d'actions. Pour une position donnée, tu

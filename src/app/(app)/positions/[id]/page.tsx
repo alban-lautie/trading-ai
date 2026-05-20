@@ -4,6 +4,7 @@ import { notFound } from "next/navigation"
 import { ArrowLeft } from "lucide-react"
 
 import { AlertsList } from "@/components/alerts/alerts-list"
+import { PositionChatsSection } from "@/components/chat/position-chats-section"
 import { PositionBenchmarks } from "@/components/positions/position-benchmarks"
 import { PositionDetailActions } from "@/components/positions/position-detail-actions"
 import { PositionEntryCard } from "@/components/positions/position-entry-card"
@@ -14,6 +15,7 @@ import { PositionMetricCards } from "@/components/positions/position-metric-card
 import { PositionNews } from "@/components/positions/position-news"
 import { PositionProposals } from "@/components/positions/position-proposals"
 import { PositionPriceChart } from "@/components/positions/position-price-chart"
+import { listConversationsForPosition } from "@/features/chat/queries"
 import { getPositionDetail } from "@/features/positions/queries"
 
 interface PositionDetailPageProps {
@@ -32,7 +34,10 @@ export default async function PositionDetailPage({
   params,
 }: PositionDetailPageProps) {
   const { id } = await params
-  const detail = await getPositionDetail(id)
+  const [detail, conversations] = await Promise.all([
+    getPositionDetail(id),
+    listConversationsForPosition(id),
+  ])
   if (!detail) {
     notFound()
   }
@@ -91,6 +96,11 @@ export default async function PositionDetailPage({
       </div>
 
       <PositionInsight positionId={position.id} />
+
+      <PositionChatsSection
+        positionId={position.id}
+        conversations={conversations}
+      />
 
       <PositionNews news={news} />
 

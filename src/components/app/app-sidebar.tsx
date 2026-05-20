@@ -7,6 +7,7 @@ import {
   Eye,
   LayoutDashboard,
   LineChart,
+  MessageSquare,
   Sparkles,
   Wallet,
 } from "lucide-react"
@@ -32,6 +33,7 @@ const navItems = [
   { href: "/watchlist", label: "Watchlist", icon: Eye },
   { href: "/alerts", label: "Alertes", icon: Bell },
   { href: "/ai", label: "Suivi IA", icon: Sparkles },
+  { href: "/chat", label: "Chat IA", icon: MessageSquare },
 ]
 
 interface AppSidebarProps {

@@ -157,6 +157,73 @@ export type Database = {
           },
         ]
       }
+      chat_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          position_id: string
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          position_id: string
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          position_id?: string
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_conversations_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["chat_role"]
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["chat_role"]
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["chat_role"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_summaries: {
         Row: {
           content: string
@@ -407,6 +474,7 @@ export type Database = {
         | "change_percent_below"
         | "unrealized_gain_above"
         | "unrealized_loss_above"
+      chat_role: "user" | "assistant"
       conviction_level: "low" | "medium" | "high"
       entry_action: "buy_now" | "wait"
       position_horizon: "short" | "medium" | "long"
@@ -553,6 +621,7 @@ export const Constants = {
         "unrealized_gain_above",
         "unrealized_loss_above",
       ],
+      chat_role: ["user", "assistant"],
       conviction_level: ["low", "medium", "high"],
       entry_action: ["buy_now", "wait"],
       position_horizon: ["short", "medium", "long"],
