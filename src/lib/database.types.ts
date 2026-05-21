@@ -319,6 +319,53 @@ export type Database = {
           },
         ]
       }
+      position_sales: {
+        Row: {
+          average_buy_price: number
+          created_at: string
+          currency: string
+          id: string
+          notes: string | null
+          position_id: string
+          quantity: number
+          sell_price: number
+          sold_at: string
+          user_id: string
+        }
+        Insert: {
+          average_buy_price: number
+          created_at?: string
+          currency: string
+          id?: string
+          notes?: string | null
+          position_id: string
+          quantity: number
+          sell_price: number
+          sold_at?: string
+          user_id: string
+        }
+        Update: {
+          average_buy_price?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          notes?: string | null
+          position_id?: string
+          quantity?: number
+          sell_price?: number
+          sold_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "position_sales_position_id_fkey"
+            columns: ["position_id"]
+            isOneToOne: false
+            referencedRelation: "positions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       positions: {
         Row: {
           average_price: number

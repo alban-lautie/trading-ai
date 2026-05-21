@@ -46,3 +46,6 @@ export type ChatConversationUpdate = Tables["chat_conversations"]["Update"]
 export type ChatMessage = Tables["chat_messages"]["Row"]
 export type ChatMessageInsert = Tables["chat_messages"]["Insert"]
 export type ChatRole = Enums["chat_role"]
+
+export type PositionSale = Tables["position_sales"]["Row"]
+export type PositionSaleInsert = Tables["position_sales"]["Insert"]

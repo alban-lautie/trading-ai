@@ -6,19 +6,23 @@ import { PortfolioValueChart } from "@/components/dashboard/portfolio-value-char
 import { PortfolioSummaryCards } from "@/components/positions/portfolio-summary-cards"
 import { PositionDialog } from "@/components/positions/position-dialog"
 import { PositionsTable } from "@/components/positions/positions-table"
+import { SalesStatsCard } from "@/components/sales/sales-stats-card"
+import { SalesTable } from "@/components/sales/sales-table"
 import { Button } from "@/components/ui/button"
 import { getAlertsOverview } from "@/features/alerts/queries"
 import { getPortfolioValueHistory } from "@/features/dashboard/queries"
 import { getPortfolio } from "@/features/positions/queries"
+import { getSalesOverview } from "@/features/sales/queries"
 
 export const metadata: Metadata = { title: "Tableau de bord" }
 
 export default async function DashboardPage() {
-  const [{ rows, summary, quotesError }, valueHistory, alertsOverview] =
+  const [{ rows, summary, quotesError }, valueHistory, alertsOverview, salesOverview] =
     await Promise.all([
       getPortfolio(),
       getPortfolioValueHistory(),
       getAlertsOverview(),
+      getSalesOverview(),
     ])
 
   return (
@@ -49,6 +53,14 @@ export default async function DashboardPage() {
       />
 
       <PositionsTable rows={rows} />
+
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold tracking-tight">
+          Performance des ventes
+        </h2>
+        <SalesStatsCard overview={salesOverview} />
+        <SalesTable sales={salesOverview.sales} />
+      </section>
     </div>
   )
 }

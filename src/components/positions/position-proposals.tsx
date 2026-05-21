@@ -3,6 +3,8 @@ import { Hand, Plus, ShieldAlert, TrendingUp } from "lucide-react"
 
 import { GenerateRecommendationButton } from "@/components/positions/generate-recommendation-button"
 import { ProposalAlertSwitch } from "@/components/positions/proposal-alert-switch"
+import { RecordSaleDialog } from "@/components/sales/record-sale-dialog"
+import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -87,6 +89,8 @@ export function PositionProposals({
   const proposals = buildPositionProposals(metrics, recommendation)
   const currency = metrics.position.currency
   const positionId = metrics.position.id
+  const symbol = metrics.position.symbol
+  const availableQuantity = Number(metrics.position.quantity)
 
   return (
     <Card>
@@ -180,6 +184,30 @@ export function PositionProposals({
                       targetPrice={proposal.targetPrice as number}
                       percent={proposal.percent}
                       initialActive={alertActive}
+                    />
+                  </div>
+                ) : null}
+                {proposal.category === "take_profit" &&
+                proposal.targetPrice !== null &&
+                availableQuantity > 0 ? (
+                  <div className="pt-1">
+                    <RecordSaleDialog
+                      positionId={positionId}
+                      symbol={symbol}
+                      currency={currency}
+                      availableQuantity={availableQuantity}
+                      prefill={{
+                        sellPrice: proposal.targetPrice,
+                        quantity:
+                          proposal.percent !== null
+                            ? (availableQuantity * proposal.percent) / 100
+                            : undefined,
+                      }}
+                      trigger={
+                        <Button size="sm" variant="outline">
+                          J&apos;ai vendu à ce prix
+                        </Button>
+                      }
                     />
                   </div>
                 ) : null}

@@ -35,6 +35,7 @@ export async function getPortfolio(): Promise<PortfolioData> {
     .from("positions")
     .select("*")
     .eq("user_id", user.id)
+    .gt("quantity", 0)
     .order("created_at", { ascending: false })
 
   if (error) {
@@ -74,6 +75,7 @@ export async function listPositions(): Promise<Position[]> {
     .from("positions")
     .select("*")
     .eq("user_id", user.id)
+    .gt("quantity", 0)
     .order("symbol", { ascending: true })
 
   if (error) {
