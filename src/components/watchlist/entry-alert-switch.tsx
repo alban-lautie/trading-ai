@@ -11,6 +11,8 @@ interface EntryAlertSwitchProps {
   initialActive: boolean
   /** Disabled when no entry price has been recommended yet. */
   disabled?: boolean
+  /** Renders the bare switch, without the descriptive text (e.g. in a table). */
+  hideLabel?: boolean
 }
 
 /**
@@ -23,6 +25,7 @@ export function EntryAlertSwitch({
   itemId,
   initialActive,
   disabled,
+  hideLabel,
 }: EntryAlertSwitchProps) {
   const [isPending, startTransition] = useTransition()
   const [active, setActive] = useOptimistic(initialActive)
@@ -39,14 +42,22 @@ export function EntryAlertSwitch({
     })
   }
 
+  const switchElement = (
+    <Switch
+      checked={active}
+      disabled={isPending || disabled}
+      onCheckedChange={handleToggle}
+      aria-label="Activer l'alerte au point d'entrée"
+    />
+  )
+
+  if (hideLabel) {
+    return switchElement
+  }
+
   return (
     <label className="flex items-center gap-2">
-      <Switch
-        checked={active}
-        disabled={isPending || disabled}
-        onCheckedChange={handleToggle}
-        aria-label="Activer l'alerte au point d'entrée"
-      />
+      {switchElement}
       <span className="text-muted-foreground text-xs">
         Alerte au point d&apos;entrée
       </span>

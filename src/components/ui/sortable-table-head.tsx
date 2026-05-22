@@ -3,31 +3,27 @@
 import type { ReactNode } from "react"
 import { ArrowDown, ArrowUp, ChevronsUpDown } from "lucide-react"
 
-import type {
-  SortDirection,
-  SortKey,
-} from "@/components/positions/positions-sort"
 import { TableHead } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 
-interface SortableTableHeadProps {
-  sortKey: SortKey
-  activeKey: SortKey | null
-  direction: SortDirection
-  onSort: (key: SortKey) => void
+interface SortableTableHeadProps<TKey extends string> {
+  sortKey: TKey
+  activeKey: TKey | null
+  direction: "asc" | "desc"
+  onSort: (key: TKey) => void
   className?: string
   children: ReactNode
 }
 
-/** A positions table header cell whose label toggles sorting on click. */
-export function SortableTableHead({
+/** A table header cell whose label toggles sorting on the given key. */
+export function SortableTableHead<TKey extends string>({
   sortKey,
   activeKey,
   direction,
   onSort,
   className,
   children,
-}: SortableTableHeadProps) {
+}: SortableTableHeadProps<TKey>) {
   const isActive = activeKey === sortKey
   const Icon = !isActive
     ? ChevronsUpDown

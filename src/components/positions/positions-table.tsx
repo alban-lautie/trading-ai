@@ -8,7 +8,7 @@ import {
   type SortDirection,
   type SortKey,
 } from "@/components/positions/positions-sort"
-import { SortableTableHead } from "@/components/positions/sortable-table-head"
+import { SortableTableHead } from "@/components/ui/sortable-table-head"
 import {
   Table,
   TableBody,

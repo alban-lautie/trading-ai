@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 
 import { Button } from "@/components/ui/button"
 import { WatchlistDialog } from "@/components/watchlist/watchlist-dialog"
-import { WatchlistItemCard } from "@/components/watchlist/watchlist-item-card"
+import { WatchlistTable } from "@/components/watchlist/watchlist-table"
 import { getWatchlist } from "@/features/watchlist/queries"
 
 export const metadata: Metadata = { title: "Watchlist" }
@@ -31,18 +31,7 @@ export default async function WatchlistPage() {
         </p>
       ) : null}
 
-      {rows.length === 0 ? (
-        <p className="text-muted-foreground rounded-lg border border-dashed p-8 text-center text-sm">
-          Aucune action surveillée. Ajoutez-en une pour obtenir une
-          recommandation de point d&apos;entrée.
-        </p>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {rows.map((row) => (
-            <WatchlistItemCard key={row.item.id} row={row} />
-          ))}
-        </div>
-      )}
+      <WatchlistTable rows={rows} />
     </div>
   )
 }
