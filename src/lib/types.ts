@@ -9,6 +9,7 @@ export type PositionUpdate = Tables["positions"]["Update"]
 export type PositionObjective = Enums["position_objective"]
 export type PositionHorizon = Enums["position_horizon"]
 export type RiskTolerance = Enums["risk_tolerance"]
+export type TradingStyle = Enums["trading_style"]
 
 export type PositionRecommendation = Tables["position_recommendations"]["Row"]
 export type PositionRecommendationInsert =

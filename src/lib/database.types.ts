@@ -7,31 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       ai_monitoring_config: {
@@ -382,6 +357,7 @@ export type Database = {
           risk_tolerance: Database["public"]["Enums"]["risk_tolerance"]
           symbol: string
           target_gain_percent: number | null
+          trading_style: Database["public"]["Enums"]["trading_style"]
           updated_at: string
           user_id: string
         }
@@ -400,6 +376,7 @@ export type Database = {
           risk_tolerance?: Database["public"]["Enums"]["risk_tolerance"]
           symbol: string
           target_gain_percent?: number | null
+          trading_style?: Database["public"]["Enums"]["trading_style"]
           updated_at?: string
           user_id: string
         }
@@ -418,6 +395,7 @@ export type Database = {
           risk_tolerance?: Database["public"]["Enums"]["risk_tolerance"]
           symbol?: string
           target_gain_percent?: number | null
+          trading_style?: Database["public"]["Enums"]["trading_style"]
           updated_at?: string
           user_id?: string
         }
@@ -467,6 +445,7 @@ export type Database = {
           recommended_entry_price: number | null
           symbol: string
           target_gain_percent: number | null
+          trading_style: Database["public"]["Enums"]["trading_style"]
           updated_at: string
           user_id: string
         }
@@ -483,6 +462,7 @@ export type Database = {
           recommended_entry_price?: number | null
           symbol: string
           target_gain_percent?: number | null
+          trading_style?: Database["public"]["Enums"]["trading_style"]
           updated_at?: string
           user_id: string
         }
@@ -499,6 +479,7 @@ export type Database = {
           recommended_entry_price?: number | null
           symbol?: string
           target_gain_percent?: number | null
+          trading_style?: Database["public"]["Enums"]["trading_style"]
           updated_at?: string
           user_id?: string
         }
@@ -528,6 +509,7 @@ export type Database = {
       position_objective: "quick_gain" | "long_term" | "income"
       recommendation_action: "sell_now" | "hold" | "reinforce"
       risk_tolerance: "low" | "medium" | "high"
+      trading_style: "day_trading" | "swing"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -653,9 +635,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       ai_delivery: ["telegram", "in_app", "both"],
@@ -675,6 +654,7 @@ export const Constants = {
       position_objective: ["quick_gain", "long_term", "income"],
       recommendation_action: ["sell_now", "hold", "reinforce"],
       risk_tolerance: ["low", "medium", "high"],
+      trading_style: ["day_trading", "swing"],
     },
   },
 } as const

@@ -72,6 +72,7 @@ export async function importPositions(
       objective: data.objective,
       horizon: data.horizon,
       risk_tolerance: data.riskTolerance,
+      trading_style: data.tradingStyle,
       target_gain_percent: data.targetGainPercent ?? null,
       notes: data.notes || null,
     })

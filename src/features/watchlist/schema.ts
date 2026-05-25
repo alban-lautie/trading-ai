@@ -15,6 +15,7 @@ export const watchlistSchema = z.object({
     .length(3, "Utilisez un code devise à 3 lettres")
     .transform((value) => value.toUpperCase())
     .default("USD"),
+  tradingStyle: z.enum(["day_trading", "swing"]).default("swing"),
   targetGainPercent: z.preprocess(
     (value) =>
       value === "" || value === undefined || value === null

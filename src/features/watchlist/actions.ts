@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 
 import { requireUser } from "@/features/auth"
 import type { ActionResult } from "@/features/positions/actions"
+import { getQuotesWithFallback } from "@/features/quotes/queries"
 import { watchlistSchema } from "@/features/watchlist/schema"
 
 function parseForm(formData: FormData) {
@@ -11,6 +12,7 @@ function parseForm(formData: FormData) {
     symbol: formData.get("symbol"),
     name: formData.get("name") ?? undefined,
     currency: formData.get("currency") || "USD",
+    tradingStyle: formData.get("tradingStyle") ?? undefined,
     targetGainPercent: formData.get("targetGainPercent") ?? undefined,
     notes: formData.get("notes") ?? undefined,
   })
@@ -39,6 +41,7 @@ export async function createWatchlistItem(
     symbol: values.symbol,
     name: values.name || null,
     currency: values.currency,
+    trading_style: values.tradingStyle,
     target_gain_percent: values.targetGainPercent ?? null,
     notes: values.notes || null,
   })
@@ -71,6 +74,7 @@ export async function updateWatchlistItem(
       symbol: values.symbol,
       name: values.name || null,
       currency: values.currency,
+      trading_style: values.tradingStyle,
       target_gain_percent: values.targetGainPercent ?? null,
       notes: values.notes || null,
     })
@@ -138,12 +142,20 @@ export async function setEntryAlert(
     if (item.recommended_entry_price === null) {
       return { error: "Aucun prix d'entrée recommandé pour le moment." }
     }
+    const threshold = round2(Number(item.recommended_entry_price))
+    const { quotes } = await getQuotesWithFallback([item.symbol])
+    const currentPrice = quotes.get(item.symbol.toUpperCase())?.price ?? null
+    const direction: "price_above" | "price_below" =
+      currentPrice !== null && threshold > currentPrice
+        ? "price_above"
+        : "price_below"
+
     const { error } = await supabase.from("alerts").insert({
       user_id: user.id,
       watchlist_id: itemId,
       symbol: item.symbol,
-      type: "price_below",
-      threshold: round2(Number(item.recommended_entry_price)),
+      type: direction,
+      threshold,
       is_active: true,
     })
 

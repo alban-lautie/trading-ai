@@ -24,6 +24,7 @@ import {
   POSITION_HORIZON_OPTIONS,
   POSITION_OBJECTIVE_OPTIONS,
   RISK_TOLERANCE_OPTIONS,
+  TRADING_STYLE_OPTIONS,
 } from "@/features/positions/intentions"
 import type { Position } from "@/lib/types"
 
@@ -37,6 +38,7 @@ interface PositionFormFields {
   objective: string
   horizon: string
   riskTolerance: string
+  tradingStyle: string
   targetGainPercent: string
   notes: string
 }
@@ -69,6 +71,7 @@ export function PositionDialog({ position, trigger }: PositionDialogProps) {
       objective: position?.objective ?? "long_term",
       horizon: position?.horizon ?? "medium",
       riskTolerance: position?.risk_tolerance ?? "medium",
+      tradingStyle: position?.trading_style ?? "swing",
       targetGainPercent:
         position?.target_gain_percent != null
           ? String(position.target_gain_percent)
@@ -180,42 +183,46 @@ export function PositionDialog({ position, trigger }: PositionDialogProps) {
           <div className="grid grid-cols-2 gap-4">
             <SelectField
               control={control}
+              name="tradingStyle"
+              label="Style de trading"
+              options={TRADING_STYLE_OPTIONS}
+            />
+            <SelectField
+              control={control}
               name="objective"
               label="Objectif"
               options={POSITION_OBJECTIVE_OPTIONS}
             />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
             <SelectField
               control={control}
               name="horizon"
               label="Horizon"
               options={POSITION_HORIZON_OPTIONS}
             />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
             <SelectField
               control={control}
               name="riskTolerance"
               label="Tolérance au risque"
               options={RISK_TOLERANCE_OPTIONS}
             />
-            <div className="grid gap-2">
-              <Label htmlFor="targetGainPercent">
-                Gain cible % (optionnel)
-              </Label>
-              <Input
-                id="targetGainPercent"
-                type="number"
-                step="any"
-                min="0"
-                placeholder="20"
-                {...register("targetGainPercent")}
-              />
-              {errors.targetGainPercent ? (
-                <p className="text-destructive text-sm">
-                  {errors.targetGainPercent.message}
-                </p>
-              ) : null}
-            </div>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="targetGainPercent">Gain cible % (optionnel)</Label>
+            <Input
+              id="targetGainPercent"
+              type="number"
+              step="any"
+              min="0"
+              placeholder="20"
+              {...register("targetGainPercent")}
+            />
+            {errors.targetGainPercent ? (
+              <p className="text-destructive text-sm">
+                {errors.targetGainPercent.message}
+              </p>
+            ) : null}
           </div>
           <div className="grid gap-2">
             <Label htmlFor="notes">Notes (optionnel)</Label>

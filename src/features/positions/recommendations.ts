@@ -102,6 +102,7 @@ export async function runPositionRecommendation(
       averagePrice: Number(position.average_price),
       currency: position.currency,
       openedAt: position.opened_at,
+      tradingStyle: position.trading_style,
       objective: POSITION_OBJECTIVE_LABELS[position.objective],
       horizon: POSITION_HORIZON_LABELS[position.horizon],
       riskTolerance: RISK_TOLERANCE_LABELS[position.risk_tolerance],

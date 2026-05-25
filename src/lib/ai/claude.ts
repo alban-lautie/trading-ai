@@ -13,6 +13,7 @@ import type {
   EntryAction,
   RecommendationAction,
   SellTarget,
+  TradingStyle,
 } from "@/lib/types"
 
 /**
@@ -390,15 +391,31 @@ export async function chatAboutPosition(
 const RECOMMENDATION_SYSTEM_PROMPT = `Tu es un moteur de recommandation pour une
 application de suivi de portefeuille d'actions. Pour une position donnée, tu
 détermines l'action recommandée et des niveaux de prix concrets, en tenant
-compte de l'intention de l'utilisateur sur cette position, du cours et de sa
-dynamique, de la volatilité, des indicateurs techniques, des fondamentaux, des
-objectifs de cours des analystes, des actualités récentes et du poids de la
-ligne dans le portefeuille.
+compte du STYLE DE TRADING déclaré, de l'intention de l'utilisateur sur cette
+position, du cours et de sa dynamique, de la volatilité, des indicateurs
+techniques, des fondamentaux, des objectifs de cours des analystes, des
+actualités récentes et du poids de la ligne dans le portefeuille.
 
-Règles :
-- Aligne la recommandation sur l'intention : un objectif « Gain rapide » avec un
-  horizon court justifie des paliers de vente plus proches du cours ; un
-  objectif « Long terme » laisse plus de marge à la hausse.
+Le style de trading commande l'écartement des paliers :
+
+[STYLE = day_trading]
+Horizon : la séance. L'utilisateur vise 5–10 % sur la journée, davantage en
+cas de pump. Les paliers de vente DOIVENT rester proches du prix d'achat :
+typiquement un premier palier à +3 à +5 %, un second à +7 à +10 %, et un
+troisième seulement si le titre est en pump (variation du jour > 5 % avec
+momentum confirmé) — entre +12 et +20 %. Le stop est SERRÉ : 1 à 1,5 ATR sous
+le cours, ou ~2 % sous le prix d'achat, pour limiter la perte intraday.
+Ignore largement les fondamentaux et objectifs analystes à 12 mois — ils ne
+gouvernent pas une sortie intraday. action = "sell_now" dès qu'un premier
+palier intraday a été touché et que le momentum se retourne.
+
+[STYLE = swing]
+Horizon : plusieurs jours à plusieurs semaines. Aligne la recommandation sur
+l'intention : un objectif « Gain rapide » avec un horizon court justifie des
+paliers plus proches du cours ; un objectif « Long terme » laisse plus de
+marge à la hausse.
+
+Règles communes :
 - Découpe la sortie en 1 à 3 paliers de vente (sell_targets), classés du prix
   le plus proche au plus lointain ; chaque palier vend un pourcentage de la
   position et les pourcentages somment exactement à 100.
@@ -495,6 +512,8 @@ export interface PositionRecommendationInput {
   averagePrice: number
   currency: string
   openedAt: string
+  /** Trading style declared by the user — switches the recommendation logic. */
+  tradingStyle: TradingStyle
   /** Investment intent, already translated to human labels. */
   objective: string
   horizon: string
@@ -575,6 +594,7 @@ Plus bas 52 semaines : ${num(input.fiftyTwoWeekLow)}
 Volatilité annualisée : ${pct(input.volatilityPercent, 1)}
 
 Intention de l'utilisateur :
+- Style de trading : ${input.tradingStyle === "day_trading" ? "day_trading (objectif 5–10 % sur la séance, plus en cas de pump)" : "swing (plusieurs jours à plusieurs semaines)"}
 - Objectif : ${input.objective}
 - Horizon : ${input.horizon}
 - Tolérance au risque : ${input.riskTolerance}
@@ -709,25 +729,48 @@ export async function generatePositionRecommendation(
 const ENTRY_SYSTEM_PROMPT = `Tu es un moteur de recommandation pour une
 application de suivi de portefeuille d'actions. Pour une action que
 l'utilisateur surveille mais ne détient pas encore, tu détermines un POINT
-D'ENTRÉE : le prix auquel il serait pertinent de l'acheter, en tenant compte
-du cours et de sa dynamique, de la volatilité, des indicateurs techniques, des
-fondamentaux, des objectifs de cours des analystes et des actualités récentes.
+D'ENTRÉE adapté au STYLE DE TRADING déclaré par l'utilisateur.
 
-Règles :
-- entry_target_price est le prix d'achat conseillé, dans la devise de l'action.
-  Vise un point d'entrée réaliste : un repli sur un support récent, une moyenne
-  mobile, ou un niveau cohérent avec la fourchette des analystes.
-- action = "buy_now" si le cours actuel est déjà à un niveau d'entrée
-  intéressant (entry_target_price proche ou au-dessus du cours actuel) ;
-  "wait" s'il vaut mieux attendre un repli vers entry_target_price.
-- Un RSI supérieur à 70 signale un titre suracheté (mieux vaut attendre un
-  repli) ; inférieur à 30, un titre survendu (entrée plus opportune). Un cours
-  sous sa moyenne mobile 200 jours traduit une tendance de fond baissière.
-- Si l'utilisateur a fixé un gain cible, garde-le à l'esprit : un bon point
-  d'entrée laisse une marge de hausse suffisante pour l'atteindre.
+Deux styles possibles, calibrent radicalement le point d'entrée :
+
+[STYLE = day_trading]
+Horizon : la séance. Objectif visé par l'utilisateur : capter 5–10 % (voire
+plus en cas de pump) sur la journée. Le point d'entrée DOIT être proche du
+cours actuel — typiquement dans une fourchette de ±3 % autour du cours, et
+quasiment jamais au-delà de ±5 %. Deux scénarios à privilégier :
+  • Breakout : si le titre montre du momentum (variation du jour positive,
+    RSI 50–70, cours qui pousse vers la résistance des 20 jours), place
+    entry_target_price LÉGÈREMENT AU-DESSUS de la résistance récente (par
+    exemple recentHigh × 1,003 à 1,010), pour entrer sur cassure confirmée.
+  • Pullback intraday : si le titre consolide ou se replie modérément après
+    une hausse, place entry_target_price 0,5 à 2 % SOUS le cours actuel,
+    sur un retour vers une zone d'équilibre — pas un repli profond.
+Ne propose JAMAIS un repli sur la SMA 50/200 ou un retour sur le plus bas
+20 jours en day trading : ces niveaux sont des entrées swing, beaucoup trop
+éloignées pour un objectif intraday. Les fondamentaux et les objectifs
+d'analystes ne servent qu'à éviter un titre catastrophique, pas à fixer le
+prix. action = "buy_now" si le cours est déjà dans la zone d'entrée
+(entry_target_price à ±0,5 % du cours actuel) ; "wait" pour un breakout
+imminent ou un léger pullback à attendre.
+
+[STYLE = swing]
+Horizon : plusieurs jours à plusieurs semaines. Vise un point d'entrée
+réaliste : un repli sur un support récent (recentLow, SMA50, SMA200) ou un
+niveau cohérent avec la fourchette des analystes. Un RSI > 70 signale un
+titre suracheté (mieux vaut attendre un repli) ; < 30, un titre survendu
+(entrée plus opportune). Un cours sous sa SMA 200 traduit une tendance de
+fond baissière. action = "buy_now" si le cours actuel est déjà à un bon
+niveau d'entrée ; "wait" s'il vaut mieux attendre un repli.
+
+Règles communes :
+- entry_target_price est exprimé dans la devise de l'action.
+- Si l'utilisateur a fixé un gain cible, garde-le à l'esprit ; en day trading
+  un gain cible élevé (> 10 %) n'est plausible qu'en cas de pump avéré.
 - conviction reflète ta confiance compte tenu des données disponibles : des
-  données fondamentales ou d'analystes manquantes la réduisent.
-- rationale : 1 à 2 phrases en français justifiant le point d'entrée.
+  données manquantes la réduisent. En day trading, l'absence de momentum
+  clair doit réduire la conviction.
+- rationale : 1 à 2 phrases en français justifiant le point d'entrée et,
+  en day trading, précisant explicitement le scénario (breakout ou pullback).
 - Si le cours est indisponible, renvoie entry_target_price à null.
 
 Réponds uniquement en appelant l'outil submit_entry_recommendation. Ces
@@ -770,6 +813,8 @@ export interface EntryRecommendationInput {
   symbol: string
   name: string | null
   currency: string
+  /** Trading style declared by the user — switches the entry logic. */
+  tradingStyle: TradingStyle
   /** Gain the user aims for once bought, in percent, when set. */
   targetGainPercent: number | null
   currentPrice: number | null
@@ -824,7 +869,14 @@ function buildEntryPrompt(input: EntryRecommendationInput): string {
           .join("\n")
       : "(aucune actualité récente)"
 
+  const styleLabel =
+    input.tradingStyle === "day_trading"
+      ? "day_trading (objectif 5–10 % sur la séance, plus en cas de pump)"
+      : "swing (plusieurs jours à plusieurs semaines)"
+
   return `Analyse cette action surveillée et soumets une recommandation de point d'entrée.
+
+Style de trading : ${styleLabel}
 
 Action : ${input.symbol}${input.name ? ` (${input.name})` : ""}
 Devise : ${input.currency}

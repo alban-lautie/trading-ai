@@ -2,6 +2,7 @@ import type {
   PositionHorizon,
   PositionObjective,
   RiskTolerance,
+  TradingStyle,
 } from "@/lib/types"
 
 /**
@@ -39,6 +40,13 @@ export const RISK_TOLERANCE_OPTIONS: ReadonlyArray<
   { value: "high", label: "Élevée" },
 ]
 
+export const TRADING_STYLE_OPTIONS: ReadonlyArray<
+  IntentionOption<TradingStyle>
+> = [
+  { value: "day_trading", label: "Day trading (5–10 %/jour)" },
+  { value: "swing", label: "Swing / position" },
+]
+
 function toLabelMap<T extends string>(
   options: ReadonlyArray<IntentionOption<T>>
 ): Record<T, string> {
@@ -50,3 +58,4 @@ function toLabelMap<T extends string>(
 export const POSITION_OBJECTIVE_LABELS = toLabelMap(POSITION_OBJECTIVE_OPTIONS)
 export const POSITION_HORIZON_LABELS = toLabelMap(POSITION_HORIZON_OPTIONS)
 export const RISK_TOLERANCE_LABELS = toLabelMap(RISK_TOLERANCE_OPTIONS)
+export const TRADING_STYLE_LABELS = toLabelMap(TRADING_STYLE_OPTIONS)

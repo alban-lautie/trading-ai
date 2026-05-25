@@ -29,21 +29,34 @@ function round2(value: number): number {
 /**
  * Replaces the entry-price alert armed for a watched stock so it always
  * matches the latest recommendation: the previous alert is removed and a
- * fresh active `price_below` alert is created at the recommended entry price.
+ * fresh active alert is created at the recommended entry price. The alert
+ * direction depends on the recommended price vs the current quote — a
+ * breakout setup (target above current) arms `price_above`, a pullback
+ * setup (target below current) arms `price_below`.
  */
-async function armEntryAlert(supabase: Client, item: Watchlist): Promise<void> {
+async function armEntryAlert(
+  supabase: Client,
+  item: Watchlist,
+  currentPrice: number | null
+): Promise<void> {
   await supabase.from("alerts").delete().eq("watchlist_id", item.id)
 
   if (item.recommended_entry_price === null) {
     return
   }
 
+  const threshold = round2(Number(item.recommended_entry_price))
+  const direction: "price_above" | "price_below" =
+    currentPrice !== null && threshold > currentPrice
+      ? "price_above"
+      : "price_below"
+
   await supabase.from("alerts").insert({
     user_id: item.user_id,
     watchlist_id: item.id,
     symbol: item.symbol,
-    type: "price_below",
-    threshold: round2(Number(item.recommended_entry_price)),
+    type: direction,
+    threshold,
     is_active: true,
   })
 }
@@ -72,6 +85,7 @@ export async function runEntryRecommendation(
       symbol: item.symbol,
       name: item.name,
       currency: item.currency,
+      tradingStyle: item.trading_style,
       targetGainPercent:
         item.target_gain_percent === null
           ? null
@@ -113,6 +127,6 @@ export async function runEntryRecommendation(
     return null
   }
 
-  await armEntryAlert(supabase, data)
+  await armEntryAlert(supabase, data, currentPrice)
   return data
 }

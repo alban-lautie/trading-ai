@@ -26,6 +26,7 @@ export const positionSchema = z.object({
   objective: z.enum(["quick_gain", "long_term", "income"]).default("long_term"),
   horizon: z.enum(["short", "medium", "long"]).default("medium"),
   riskTolerance: z.enum(["low", "medium", "high"]).default("medium"),
+  tradingStyle: z.enum(["day_trading", "swing"]).default("swing"),
   targetGainPercent: z.preprocess(
     (value) =>
       value === "" || value === undefined || value === null

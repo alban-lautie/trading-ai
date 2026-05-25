@@ -21,6 +21,7 @@ function parseForm(formData: FormData) {
     objective: formData.get("objective") ?? undefined,
     horizon: formData.get("horizon") ?? undefined,
     riskTolerance: formData.get("riskTolerance") ?? undefined,
+    tradingStyle: formData.get("tradingStyle") ?? undefined,
     targetGainPercent: formData.get("targetGainPercent") ?? undefined,
     notes: formData.get("notes") ?? undefined,
   })
@@ -55,6 +56,7 @@ export async function createPosition(
     objective: values.objective,
     horizon: values.horizon,
     risk_tolerance: values.riskTolerance,
+    trading_style: values.tradingStyle,
     target_gain_percent: values.targetGainPercent ?? null,
     notes: values.notes || null,
   })
@@ -93,6 +95,7 @@ export async function updatePosition(
       objective: values.objective,
       horizon: values.horizon,
       risk_tolerance: values.riskTolerance,
+      trading_style: values.tradingStyle,
       target_gain_percent: values.targetGainPercent ?? null,
       notes: values.notes || null,
     })

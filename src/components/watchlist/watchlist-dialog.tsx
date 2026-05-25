@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { CURRENCY_OPTIONS } from "@/features/positions/currencies"
+import { TRADING_STYLE_OPTIONS } from "@/features/positions/intentions"
 import {
   createWatchlistItem,
   updateWatchlistItem,
@@ -29,6 +30,7 @@ interface WatchlistFormFields {
   symbol: string
   name: string
   currency: string
+  tradingStyle: string
   targetGainPercent: string
   notes: string
 }
@@ -55,6 +57,7 @@ export function WatchlistDialog({ item, trigger }: WatchlistDialogProps) {
       symbol: item?.symbol ?? "",
       name: item?.name ?? "",
       currency: item?.currency ?? "USD",
+      tradingStyle: item?.trading_style ?? "swing",
       targetGainPercent:
         item?.target_gain_percent != null
           ? String(item.target_gain_percent)
@@ -123,24 +126,28 @@ export function WatchlistDialog({ item, trigger }: WatchlistDialogProps) {
               label="Devise"
               options={CURRENCY_OPTIONS}
             />
-            <div className="grid gap-2">
-              <Label htmlFor="targetGainPercent">
-                Gain cible % (optionnel)
-              </Label>
-              <Input
-                id="targetGainPercent"
-                type="number"
-                step="any"
-                min="0"
-                placeholder="20"
-                {...register("targetGainPercent")}
-              />
-              {errors.targetGainPercent ? (
-                <p className="text-destructive text-sm">
-                  {errors.targetGainPercent.message}
-                </p>
-              ) : null}
-            </div>
+            <SelectField
+              control={control}
+              name="tradingStyle"
+              label="Style de trading"
+              options={TRADING_STYLE_OPTIONS}
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="targetGainPercent">Gain cible % (optionnel)</Label>
+            <Input
+              id="targetGainPercent"
+              type="number"
+              step="any"
+              min="0"
+              placeholder="20"
+              {...register("targetGainPercent")}
+            />
+            {errors.targetGainPercent ? (
+              <p className="text-destructive text-sm">
+                {errors.targetGainPercent.message}
+              </p>
+            ) : null}
           </div>
           <div className="grid gap-2">
             <Label htmlFor="notes">Notes (optionnel)</Label>
