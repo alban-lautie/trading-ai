@@ -1,6 +1,5 @@
 import type { Metadata } from "next"
 
-import { DashboardAlertsCard } from "@/components/dashboard/dashboard-alerts-card"
 import { GenerateAllRecommendationsButton } from "@/components/dashboard/generate-all-recommendations-button"
 import { PortfolioValueChart } from "@/components/dashboard/portfolio-value-chart"
 import { PortfolioSummaryCards } from "@/components/positions/portfolio-summary-cards"
@@ -9,7 +8,6 @@ import { PositionsTable } from "@/components/positions/positions-table"
 import { SalesStatsCard } from "@/components/sales/sales-stats-card"
 import { SalesTable } from "@/components/sales/sales-table"
 import { Button } from "@/components/ui/button"
-import { getAlertsOverview } from "@/features/alerts/queries"
 import { getPortfolioValueHistory } from "@/features/dashboard/queries"
 import { getPortfolio } from "@/features/positions/queries"
 import { getSalesOverview } from "@/features/sales/queries"
@@ -17,11 +15,10 @@ import { getSalesOverview } from "@/features/sales/queries"
 export const metadata: Metadata = { title: "Tableau de bord" }
 
 export default async function DashboardPage() {
-  const [{ rows, summary, quotesError }, valueHistory, alertsOverview, salesOverview] =
+  const [{ rows, summary, quotesError }, valueHistory, salesOverview] =
     await Promise.all([
       getPortfolio(),
       getPortfolioValueHistory(),
-      getAlertsOverview(),
       getSalesOverview(),
     ])
 
@@ -46,11 +43,6 @@ export default async function DashboardPage() {
       <PortfolioSummaryCards summary={summary} />
 
       <PortfolioValueChart points={valueHistory} />
-
-      <DashboardAlertsCard
-        triggered={alertsOverview.triggered}
-        upcoming={alertsOverview.upcoming}
-      />
 
       <PositionsTable rows={rows} />
 
